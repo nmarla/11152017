@@ -129,4 +129,37 @@ GO
             }
         }
 
+///////////////////////////////////////////////
+<script type="text/javascript">
+    $(function () {
+        debugger;
+       // var poc = $("#corrcompInfo_purpose_of_contact").val();
+        var seletes = $("#corrcmpInfo_purpose_of_contact option:selected").text();
+       //alert(seletes);
+       $('#corrcmpInfo_purpose_of_contact').on('change', function () {
+           debugger;
+           alert(this.value);
+           if (this.value == 'test2') {
+               $('#corrcmpInfo_poc_other').show();
+           }
+           else
+           {
+               $('#corrcmpInfo_poc_other').hide();
+           }
+       })
 
+       $("#corrcmpcontactInfo_tel_number").blur(function () {
+           debugger;
+           var a = this.value;
+           //var filter = /^[0-9-+]+$/;
+           var filter1=/^\([0-9]{3}\)[0-9]{3}-[0-9]{4}$/;
+           if (filter1.test(a)) {
+               return true;
+           }
+       else {
+               alert('Please enter correct format');
+       }
+
+       });
+    });
+</script>
