@@ -75,3 +75,58 @@ UPDATE [dbo].[CorrCompInfo]
 GO
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//////////////////////////////////
+   public int InsertData(TrackingViewModel trackingviewmodel)
+        {
+            try
+            {
+                CorrCompInfo corrcompinfo = new CorrCompInfo();
+                corrcompinfo.cc_number = trackingviewmodel.corrcmpInfo.cc_number;
+                corrcompinfo.purpose_of_contact = trackingviewmodel.corrcmpInfo.purpose_of_contact;
+                corrcompinfo.cc_recdin = trackingviewmodel.corrcmpInfo.cc_recdin;
+                corrcompinfo.date_entered = trackingviewmodel.corrcmpInfo.date_entered.Date;
+                corrcompinfo.date_recd = trackingviewmodel.corrcmpInfo.date_recd.Date;
+                corrcompinfo.cc_date = DateTime.Now;
+                corrcompinfo.recd_by = 1; // trackingviewmodel.corrcmpInfo.cc_recdby
+                corrcompinfo.poc_other = trackingviewmodel.corrcmpInfo.poc_other;
+                corrcompinfo.cc_status = trackingviewmodel.corrcmpInfo.cc_status;
+                corrcompinfo.serv_req_number = trackingviewmodel.corrcmpInfo.serv_req_number;
+                 var result = _unitOfWork.Repository<CorrCompInfo>().ExecuteProcedure("SP_Insertcorrcompinfo @cc_number,@purpose_of_contact,@poc_other,@cc_recdin,@date_recd,@recd_by,@date_entered,@cc_date,@cc_status,@serv_req_number",
+              //  var result = _unitOfWork.Repository<CorrCompInfo>().ExecuteProcedure("SP_Insertcorrcompinfo",
+                             new SqlParameter("@cc_number", SqlDbType.Int) { Value = corrcompinfo.cc_number },
+                            new SqlParameter("@purpose_of_contact", SqlDbType.VarChar) { Value = corrcompinfo.purpose_of_contact },
+                            new SqlParameter("@poc_other", SqlDbType.VarChar) { Value = corrcompinfo.poc_other },
+                            new SqlParameter("@cc_recdin", SqlDbType.VarChar) { Value = corrcompinfo.cc_recdin },
+                            new SqlParameter("@date_recd", SqlDbType.Date) { Value =corrcompinfo.date_recd },
+                            new SqlParameter("@recd_by", SqlDbType.Int) { Value = corrcompinfo.recd_by },
+                            new SqlParameter("@date_entered", SqlDbType.Date) { Value = corrcompinfo.date_entered},
+                            new SqlParameter("@cc_date", SqlDbType.Date) { Value = corrcompinfo.cc_date },
+                            new SqlParameter("@cc_status", SqlDbType.VarChar) { Value = corrcompinfo.cc_status },
+                            new SqlParameter("@serv_req_number", SqlDbType.VarChar) { Value = corrcompinfo.serv_req_number });
+                //_unitOfWork.Repository<CorrCompInfo>().Insert(corrcompinfo);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                return 1;
+            }
+        }
+
+
