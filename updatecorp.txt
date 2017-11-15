@@ -1,0 +1,77 @@
+USE [CTSDEV]
+GO
+
+/****** Object:  StoredProcedure [dbo].[SP_UpdateCorp]    Script Date: 11/15/2017 19:38:02 ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+create PROCEDURE [dbo].[SP_UpdateCorp]
+   (
+            @cc_number int   
+           ,@purpose_of_contact varchar(20)
+           ,@poc_other varchar(20)
+           ,@cc_recdin varchar(20)
+           ,@date_entered datetime
+           ,@date_recd datetime
+           ,@recd_by int
+           ,@cc_date datetime
+     ,@cc_status varchar(20)
+        ,@serv_req_number varchar(50)
+   )
+
+AS
+BEGIN
+if @cc_number = 0
+begin
+INSERT INTO [dbo].[CorrCompInfo]
+           (
+           [purpose_of_contact]
+           ,[poc_other]
+           ,[cc_recdin]
+           ,[date_entered]
+           ,[date_recd]
+           ,[recd_by]
+           ,[cc_date]
+     ,[cc_status]
+     ,[serv_req_number])
+     VALUES
+           (
+       
+           @purpose_of_contact
+           ,@poc_other
+           ,@cc_recdin
+           ,@date_entered
+           ,@date_recd
+           ,@recd_by
+           ,@cc_date
+     ,@cc_status
+        ,@serv_req_number
+     )
+END
+ELSE
+BEGIN
+ 
+UPDATE [dbo].[CorrCompInfo]
+   SET [purpose_of_contact] = @purpose_of_contact
+      ,[poc_other] = @poc_other
+      ,[cc_recdin] = @cc_recdin
+      ,[date_entered] = @date_entered
+      ,[date_recd] = @date_recd
+      ,[recd_by] = @recd_by
+      ,[cc_date] = @cc_date
+      ,[cc_status] = @cc_status
+      ,[serv_req_number] = @serv_req_number
+      
+ WHERE cc_number=@cc_number
+
+ END
+
+ END
+
+-- exec SP_UpdateCorp 345,'now','now','now','2017-11-11','2017-11-11',1,'2017-11-11','now','now'
+GO
+
+
