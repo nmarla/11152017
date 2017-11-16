@@ -1,0 +1,234 @@
+/////////////stored proc for last ccno/////////////
+USE [CTSDEV]
+GO
+/****** Object:  StoredProcedure [dbo].[SP_GetLastCCNumber]    Script Date: 11/16/2017 19:02:13 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[SP_GetLastCCNumber]
+AS
+BEGIN
+	SELECT TOP 1 * FROM [CorrCompInfo] ORDER BY [cc_number] DESC
+END
+GO
+/////////////stored proc for last ccno/////////////
+
+//////////////////////tarckinginfo controller code//////////////////////
+ [HttpGet]
+        public ActionResult TrackingInfo()
+        {
+            CorrCompInfo corrcominfo = new CorrCompInfo();
+             int ccno = _tackingBO.getlastccnumber(corrcominfo);
+            ccno = ccno + 1;
+            corrcominfo.cc_number = ccno;
+            TrackingViewModel trackingVM = new TrackingViewModel();
+            trackingVM.corrcmpInfo = corrcominfo;
+            FillDropdowns();
+            return View(trackingVM);
+        }
+/////////////////////tarckinginfo controller code//////////////////////
+
+
+//////////////////// tracking bo layer code/////////////////////
+ public int getlastccnumber(CorrCompInfo corrcominfo)
+        {
+            try
+            {
+                var result = _unitOfWork.Repository<CorrCompInfo>().ExecuteProcedureForList("SP_GetLastCCNumber").ToList();
+                int lastccno = Convert.ToInt32(result[0].cc_number);
+                return lastccno;
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+		//////////////////// tracking bo layer code/////////////////////
+		
+		
+		
+		
+/////////////////////// for poc other validation and telephone no fromat/////////////////////////////////////
+//////////////////////cs html file code/////////////////////////////////////////
+  <div class="col-sm-6 col-md-3">
+                    <div class="form-group form-group-sm">
+                        <label for="TicketNo">Purpose of contact:</label>
+                         @Html.DropDownListFor(m => m.corrcmpInfo.purpose_of_contact, new SelectList((IEnumerable<CTSCodeTable>)ViewData["PurposeOfContact"], "short_description", "short_description"), new { @class = "form-control" })
+                        @Html.TextBoxFor(m => m.corrcmpInfo.poc_other, new { autocomplete = "off", @class = "form-control", style = "display: none;" })
+                    </div>
+                </div>		
+				
+<script type="text/javascript">
+    $(function () {
+        debugger;
+       // var poc = $("#corrcompInfo_purpose_of_contact").val();
+        var seletes = $("#corrcmpInfo_purpose_of_contact option:selected").text();
+       //alert(seletes);
+       $('#corrcmpInfo_purpose_of_contact').on('change', function () {
+           debugger;
+           alert(this.value);
+           if (this.value == 'test2') {
+               $('#corrcmpInfo_poc_other').show();
+           }
+           else
+           {
+               $('#corrcmpInfo_poc_other').hide();
+           }
+       })
+
+       $("#corrcmpcontactInfo_tel_number").blur(function () {
+           debugger;
+           var a = this.value;
+           //var filter = /^[0-9-+]+$/;
+           var filter1 = /^\([0-9]{3}\)[0-9]{3}-[0-9]{4}$/;
+          // var filter2 = /\(?\d{3}\)?-? *\d{3}-? *-?\d{4}/;
+           if (filter1.test(a)) {
+               return true;
+           }
+       else {
+               alert('Please enter correct formatfor te');
+       }
+
+       });
+       $("#corrcmpcontactInfo_email_add").blur(function () {
+           debugger;
+           var a = this.value;
+           var filter1 = /^\([0-9]{3}\)[0-9]{3}-[0-9]{4}$/;
+           if (filter1.test(a)) {
+               return true;
+           }
+           else {
+               alert('Please enter correct emial id format');
+           }
+
+       });
+       
+    });
+</script>		
+
+/////////////////////// for poc other validation and telephone no fromat/////////////////////////////////////
+
+//////////////////////////////// for the grid binding////////////////////////////////////
+
+USE [CTSDEV]
+GO
+/****** Object:  StoredProcedure [dbo].[SP_GetIssues]    Script Date: 11/16/2017 19:22:28 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[SP_GetIssues]
+    As 
+select * from CorrCompInfo 
+
+GO
+
+
+
+       public ActionResult DisplayData(string searchterm = "")
+        {
+            List<CorrCompInfo> gridData = new List<CorrCompInfo>();
+          //  gridData = _tackingBO.GetItemsfordropdownsfromctscodetable(100);
+            gridData = _tackingBO.GetCorrcompIssues();
+            return View(gridData);
+        }
+
+
+public List<CorrCompInfo> GetCorrcompIssues()
+        {
+            try
+            {
+                string text = "kokl";
+                //  var result = _unitOfWork.Repository<CorrCompInfo>().ExecuteProcedureForList("SP_Test").ToList();
+                var result = _unitOfWork.Repository<CorrCompInfo>().ExecuteProcedureForList("SP_GetIssues").ToList();
+                          
+                return result;
+            }
+            catch (Exception ex)
+            {
+                //  log.Info("Error in Getting  details Of All Colleges" + ex);
+                throw ex;
+            }
+        }
+		
+		
+		
+@using GridMvc.Html
+@model IEnumerable<UserIssues.Models.CorrCompInfo>
+@{
+    ViewBag.Title = "DisplayData";
+}
+
+<link href="@Url.Content("~/Content/Gridmvc.css")" rel="stylesheet" />  
+<link href="@Url.Content("~/Content/bootstrap.min.css")" rel="stylesheet" />  
+<script src="@Url.Content("~/Scripts/jquery-1.7.1.min.js")"></script>
+<script src="@Url.Content("~/Scripts/gridmvc.min.js")"></script>  
+<div class="col-lg-12 padding-side-none">
+    <div class="row-fluid" style="height: 10px;">&nbsp;</div>
+    <div class="panel panel-default">
+        <div class="panel-body">
+              @Html.Grid(Model).Columns(columns =>
+                 {
+                     columns.Add(c => c.cc_number).Titled("CC Number").Filterable(true).Sanitized(false).Encoded(false).RenderValueAs(model => Html.ActionLink(model.poc_other,
+     "DetailReport", "Tracking", new { tableCode = model.poc_other }, null).ToHtmlString());
+                     columns.Add(c => c.cc_status).Titled("CC Status").Sortable(true);
+                     columns.Add(c => c.date_entered).Titled("Date Entered").Sortable(true);
+                 }).WithPaging(10).Sortable(true)
+            <div class="well">
+                                <div class="row margin-bottom">
+                                    <div class="col-md-12">
+<table class="table table-condensed table-hover">
+     <tr>
+                                                <th style="border-top: 0px solid #136073;">CC No.</th>
+                                                <th style="border-top: 0px solid #136073;">Purpose of Contact</th>
+                                                <th style="border-top: 0px solid #136073;">Date Entered</th>
+                                                <th style="border-top: 0px solid #136073;">Recd_by</th>
+                                            </tr>
+     @foreach (var category in Model)
+            {
+         <tr>
+             <td>
+               @Html.ActionLink( @category.cc_number.ToString(), "DetailReport", "Tracking", new { ccno =@category.cc_number }, null)
+                 @category.cc_number
+             </td>
+             <td>
+                 @category.purpose_of_contact
+             </td>
+             <td>
+                 @category.date_entered
+             </td>
+             <td>
+                 @category.recd_by
+             </td>
+         </tr>
+            }
+
+</table>
+                                         </div>
+                                </div>
+                            </div>
+      
+        </div>
+    </div>
+    <input type="button" value="New" onclick="location.href='@Url.Action("TrackingInfo", "Tracking")'" />
+    
+</div>
+//////////////////////////////to go to detailed report(code is not wroking)/////////////////////////////////////
+ public ActionResult DetailReport(int ccno)
+        {
+            List<CTSCodeTable> items = new List<CTSCodeTable>();
+            TrackingViewModel trackingVM = new TrackingViewModel();
+            CorrCompInfo corrcominfo = new CorrCompInfo();
+            corrcominfo = _tackingBO.GetCorrcompIssuesbyccno(ccno);
+            trackingVM.corrcmpInfo = corrcominfo;
+            ViewData["PurposeOfContact"] = corrcominfo.purpose_of_contact;
+            return View("TrackingInfo",trackingVM);
+        }
+//////////////////////////////to go to detailed report/////////////////////////////////////
+		
+
+
+		
+
+
