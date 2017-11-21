@@ -1,0 +1,24 @@
+//////////////////////tracking bo layer method/////////////////////
+public List<CTSCodeTable> GetItemsfordropdownsctscodetable()
+        {
+            try
+            {
+                var result = _unitOfWork.Repository<CTSCodeTable>().ExecuteProcedureForList("SP_Dropdownitems").ToList();
+                return result;
+            }
+            catch (Exception ex)
+            {
+                //  log.Info("Error in Getting  details Of All Colleges" + ex);
+                throw ex;
+            }
+        }
+//////////////////////tracking bo layer method/////////////////////
+///////////////////itracking bo layer code/////////////////////////
+List<CTSCodeTable> GetItemsfordropdownsctscodetable();
+///////////////////itracking bo layer code/////////////////////////
+//////////////////tracking controller filldropdowns method//////////
+List<CTSCodeTable> items = new List<CTSCodeTable>();
+                items = _tackingBO.GetItemsfordropdownsctscodetable();
+                ViewData["PurposeOfContact"] = items.Where(s => s.table_no.Equals(100)).ToList(); ;
+				/////////////table code column ayithe use s.table_code.Equals("100")) //////
+//////////////////tracking controller filldropdowns method//////////
