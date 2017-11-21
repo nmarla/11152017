@@ -1,0 +1,58 @@
+﻿@using LoginAD.Models;
+@model LoginModel
+@{
+    ViewBag.Title = "Login";
+    Layout = "";
+}
+
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+    <meta name="viewport" content="width=device-width" />
+    <title>Login Page</title>
+    
+</head>
+
+<body style="background: #136073;">
+    @using (Html.BeginForm())
+    {
+        <div class="container">
+            <form name="login">
+                <div class="grp1">
+                    <div class="gap">@Html.Label("lbluname", "UserName:")</div>
+                    <div>
+                        @Html.TextBoxFor(m => m.UserName, new { required = false, autocomplete = "off" })
+                    </div>
+                </div>
+                <div class="grp2 err-icon">
+                    <a href="#" id="UserNameErrNotes" class="tooltip" style="display: none;">
+                        <img src="~/Content/Images/danger-icon-2.png" alt="">
+                    </a>
+                </div>
+                <div class="grp1">
+                    <div class="gap">@Html.Label("lblpwd", "Password:")</div>
+                    <div>@Html.TextBoxFor(m => m.Password, new { required = false, autocomplete = "off" })</div>
+                </div>
+                <!-- end of grp1 -->
+                <div class="grp2 err-icon">
+                    <a href="#" id="PasswordErrNotes" class="tooltip" style="display: none;">
+                        <img src="~/Content/Images/danger-icon-2.png" alt="">
+                    </a>
+                </div>
+                <b style="color: red">@ViewBag.Message</b>
+                <div class="gap" style="text-align: right">
+                    <input type="submit" class="btn btn-sm btn-primary" value="LOGIN" id="btnSubmit" />
+                    @*<input type="reset" value="Cancel" />*@
+                </div>
+
+            </form>
+
+
+        </div>
+        <!-- end of lg-bg -->
+
+    }
+
+</body>
+</html>
