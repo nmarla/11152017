@@ -1,0 +1,69 @@
+        $('#corrcmpInfo_purpose_of_contact').on('change', function () {
+            var stateId = $("#corrcmpInfo_purpose_of_contact").val();
+            var url = "/Tracking/FillModel?value=" + stateId;
+            alert(url);
+           debugger;
+           $.ajax({
+               type: 'GET',
+               url: url,
+               datatype: 'application/json',
+               contentType: 'application/json',
+               data: JSON.stringify({stateId: +stateId}),
+               success: function (result) {
+                   debugger;
+                   alert("hi");
+                   alert(result);
+                   $("#corrcmpInfo_poc_other").html("");
+                   $.each(result, function (i, Arrayvalue) {
+                       debugger;
+                       $("#corrcmpInfo_poc_other").append($('<option></option>').val(Arrayvalue.Value).html(Arrayvalue.Text))
+                   })
+               },
+               error: function () {
+                   alert("Whooaaa! Something went wrong..")
+               },
+       });
+         //  alert(this.value);
+           
+       })
+	   
+	   
+	   
+	   
+	   public JsonResult FillModel(string value)
+        {
+            try
+            {
+                List<CTSCodeTable> sublstcontent = new List<CTSCodeTable>();
+                sublstcontent = _tackingBO.GetItemsfordropdownsfromctscodetable(100);
+                ViewData["ComplaintEnquiry"] = sublstcontent;
+                List<SelectListItem> subcatlist = new List<SelectListItem>();
+                //List<string> items = new List<string>();
+                foreach (var item in sublstcontent)
+                {
+                    subcatlist.Add(new SelectListItem
+                    {
+                        Text = item.short_description,
+                        Value = item.table_code
+                    });
+                }
+
+                return Json(subcatlist, JsonRequestBehavior.AllowGet);
+            }
+            catch (Exception ee)
+            {
+                Console.WriteLine(ee.Message);
+
+                //WriteLog("Exception in Saving Canvas " + txtLocation + " " + ee.Message);
+            }
+
+            return null;
+        }
+		
+		
+		
+		
+		
+		
+		
+		@Html.DropDownListFor(m =>m.corrcmpInfo.poc_other, Enumerable.Empty<SelectListItem>(),"---select--", new { @class = "form-control",style = "display: none;"})
