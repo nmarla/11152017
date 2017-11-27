@@ -1,0 +1,30 @@
+        .LogInBackground {
+            background: #eee;
+            border: none;
+            border-radius: 10px;
+            background-image: url('/images/LogInBackground4.png');
+            background-repeat: no-repeat;
+            background-position: center;
+            background-size: contain;
+            padding: 30px;
+            height: 500px;
+            margin: 100px 0;
+        }
+
+        @media (min-width: 768px) and (max-width: 991px) {
+        }
+
+        @media (max-width: 991px) {
+            .LogInBackground {
+                background: #fff;
+                border: none;
+                border-radius: 10px;
+                background-image: url('/images/LogInBackground4sm.png');
+                background-repeat: no-repeat;
+                background-position: center;
+                background-size: contain;
+                padding: 30px;
+                height: auto;
+                margin: 25px 0;
+            }
+        }

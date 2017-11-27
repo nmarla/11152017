@@ -1,0 +1,36 @@
+﻿@using CTSImp1.ViewModels;
+@using CTSImp1.Models;
+@model TrackingViewModel
+@{
+    ViewBag.Title = "ResolutionPVPV";
+    Layout = "";
+}
+@using (Html.BeginForm())
+{
+<div class="row">
+    <div class="col-sm-6 col-md-3">
+        <div class="form-group form-group-sm">
+            @Html.Label("lblRslBy", "Resolution Handled By:")
+            @Html.DropDownListFor(m => m.resolutionInfom.cc_handled_by, new SelectList((IEnumerable<CTSCodeTable>)ViewData["ResolutionHandledBy"], "short_description", "short_description"),"---Select One--", new { @class = "form-control" })
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-3">
+        <div class="form-group form-group-sm">
+            @Html.Label("lblDtRsl", "Date of Resolution:")
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-3">
+        <div class="form-group form-group-sm">
+            @Html.Label("lblRslSts", "Resolution Status:")
+            @Html.DropDownListFor(m => m.resolutionInfom.resolution_status, new SelectList((IEnumerable<CTSCodeTable>)ViewData["ResolutionStatus"], "short_description", "short_description"),"---Select One--", new { @class = "form-control" })
+        </div>
+    </div>
+    <div class="col-md-12">
+        <div class="form-group form-group-sm">
+            <label>Resolution:</label>
+            @Html.TextAreaFor(m => m.resolutionInfom.comments)
+        </div>
+    </div>
+</div>
+<input type="submit" class="btn btn-primary btn-sm" formaction="SaveResolutionInfo" value="Save Resolution">
+}

@@ -1,0 +1,22 @@
+﻿@using CTSImp1.ViewModels;
+@using CTSImp1.Models;
+@model TrackingViewModel
+@{
+    ViewBag.Title = "Budget";
+}
+
+<h2>Budget</h2>
+
+<div class="col-sm-6 col-md-3">
+    <div class="form-group form-group-sm">
+        @Html.Label("lblTktno", "Ticket No. / Complaint No.:")
+        @Html.TextBoxFor(m => m.corrcmpInfo.cc_number, new { autocomplete = "off", @class = "form-control" })
+    </div>
+</div>
+<div class="col-sm-6 col-md-3">
+    <div class="form-group form-group-sm">
+        <label for="TicketNo">Purpose of contact:</label>
+        @Html.DropDownListFor(m => m.corrcmpInfo.purpose_of_contact, new SelectList((IEnumerable<BudgetcodeTable>)ViewData["PurposeOfContact"], "short_description", "short_description"), "---Select One--", new { @class = "form-control" })
+        @* @Html.DropDownList("CorrespondenceType", new SelectList((IEnumerable<CTSCodeTable>)ViewData["ListItems"], "table_no", "short_description"), new { @class = "form-control" })*@
+    </div>
+</div>

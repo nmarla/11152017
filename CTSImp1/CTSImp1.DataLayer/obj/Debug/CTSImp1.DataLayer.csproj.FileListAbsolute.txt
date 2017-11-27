@@ -1,0 +1,55 @@
+E:\CTSImp1\CTSImp1.DataLayer\bin\Debug\CTSImp1.DataLayer.dll.config
+E:\CTSImp1\CTSImp1.DataLayer\bin\Debug\CTSImp1.DataLayer.dll
+E:\CTSImp1\CTSImp1.DataLayer\bin\Debug\CTSImp1.DataLayer.pdb
+E:\CTSImp1\CTSImp1.DataLayer\bin\Debug\CTSImp1.Models.dll
+E:\CTSImp1\CTSImp1.DataLayer\bin\Debug\EntityFramework.dll
+E:\CTSImp1\CTSImp1.DataLayer\bin\Debug\EntityFramework.SqlServer.dll
+E:\CTSImp1\CTSImp1.DataLayer\bin\Debug\CTSImp1.Models.pdb
+E:\CTSImp1\CTSImp1.DataLayer\bin\Debug\CTSImp1.Models.dll.config
+E:\CTSImp1\CTSImp1.DataLayer\bin\Debug\EntityFramework.xml
+E:\CTSImp1\CTSImp1.DataLayer\bin\Debug\EntityFramework.SqlServer.xml
+E:\CTSImp1\CTSImp1.DataLayer\obj\Debug\CTSImp1.DataLayer.csprojResolveAssemblyReference.cache
+E:\CTSImp1\CTSImp1.DataLayer\obj\Debug\CTSImp1.DataLayer.csproj.CoreCompileInputs.cache
+E:\CTSImp1\CTSImp1.DataLayer\obj\Debug\CTSImp1.DataLayer.dll
+E:\CTSImp1\CTSImp1.DataLayer\obj\Debug\CTSImp1.DataLayer.pdb
+E:\CTSImp1\CTSImp1.DataLayer\bin\Debug\System.Web.Mvc.dll
+E:\CTSImp1\CTSImp1.DataLayer\bin\Debug\System.Web.Razor.dll
+E:\CTSImp1\CTSImp1.DataLayer\bin\Debug\System.Web.WebPages.Razor.dll
+E:\CTSImp1\CTSImp1.DataLayer\bin\Debug\System.Web.WebPages.dll
+E:\CTSImp1\CTSImp1.DataLayer\bin\Debug\Microsoft.Web.Infrastructure.dll
+E:\CTSImp1\CTSImp1.DataLayer\bin\Debug\System.Web.WebPages.Deployment.dll
+E:\CTSImp1\CTSImp1.DataLayer\bin\Debug\System.Web.Mvc.xml
+E:\CTSImp1\CTSImp1.DataLayer\bin\Debug\System.Web.Razor.xml
+E:\CTSImp1\CTSImp1.DataLayer\bin\Debug\System.Web.WebPages.Razor.xml
+E:\CTSImp1\CTSImp1.DataLayer\bin\Debug\System.Web.WebPages.xml
+E:\CTSImp1\CTSImp1.DataLayer\bin\Debug\System.Web.WebPages.Deployment.xml
+D:\navya backup\Projects\jeevan\11272017\CTSImp1(3)\CTSImp1\CTSImp1.DataLayer\bin\Debug\CTSImp1.DataLayer.dll.config
+D:\navya backup\Projects\jeevan\11272017\CTSImp1(3)\CTSImp1\CTSImp1.DataLayer\bin\Debug\CTSImp1.DataLayer.dll
+D:\navya backup\Projects\jeevan\11272017\CTSImp1(3)\CTSImp1\CTSImp1.DataLayer\bin\Debug\CTSImp1.DataLayer.pdb
+D:\navya backup\Projects\jeevan\11272017\CTSImp1(3)\CTSImp1\CTSImp1.DataLayer\bin\Debug\CTSImp1.Models.dll
+D:\navya backup\Projects\jeevan\11272017\CTSImp1(3)\CTSImp1\CTSImp1.DataLayer\bin\Debug\EntityFramework.dll
+D:\navya backup\Projects\jeevan\11272017\CTSImp1(3)\CTSImp1\CTSImp1.DataLayer\bin\Debug\EntityFramework.SqlServer.dll
+D:\navya backup\Projects\jeevan\11272017\CTSImp1(3)\CTSImp1\CTSImp1.DataLayer\bin\Debug\mscorlib.dll
+D:\navya backup\Projects\jeevan\11272017\CTSImp1(3)\CTSImp1\CTSImp1.DataLayer\bin\Debug\System.Net.Http.dll
+D:\navya backup\Projects\jeevan\11272017\CTSImp1(3)\CTSImp1\CTSImp1.DataLayer\bin\Debug\System.Web.Mvc.dll
+D:\navya backup\Projects\jeevan\11272017\CTSImp1(3)\CTSImp1\CTSImp1.DataLayer\bin\Debug\System.Web.Razor.dll
+D:\navya backup\Projects\jeevan\11272017\CTSImp1(3)\CTSImp1\CTSImp1.DataLayer\bin\Debug\System.Web.WebPages.Razor.dll
+D:\navya backup\Projects\jeevan\11272017\CTSImp1(3)\CTSImp1\CTSImp1.DataLayer\bin\Debug\System.Web.WebPages.dll
+D:\navya backup\Projects\jeevan\11272017\CTSImp1(3)\CTSImp1\CTSImp1.DataLayer\bin\Debug\System.Web.WebPages.Deployment.dll
+D:\navya backup\Projects\jeevan\11272017\CTSImp1(3)\CTSImp1\CTSImp1.DataLayer\bin\Debug\CTSImp1.Models.pdb
+D:\navya backup\Projects\jeevan\11272017\CTSImp1(3)\CTSImp1\CTSImp1.DataLayer\bin\Debug\EntityFramework.xml
+D:\navya backup\Projects\jeevan\11272017\CTSImp1(3)\CTSImp1\CTSImp1.DataLayer\bin\Debug\EntityFramework.SqlServer.xml
+D:\navya backup\Projects\jeevan\11272017\CTSImp1(3)\CTSImp1\CTSImp1.DataLayer\bin\Debug\System.Net.Http.xml
+D:\navya backup\Projects\jeevan\11272017\CTSImp1(3)\CTSImp1\CTSImp1.DataLayer\bin\Debug\System.Web.Mvc.xml
+D:\navya backup\Projects\jeevan\11272017\CTSImp1(3)\CTSImp1\CTSImp1.DataLayer\bin\Debug\System.Web.Razor.xml
+D:\navya backup\Projects\jeevan\11272017\CTSImp1(3)\CTSImp1\CTSImp1.DataLayer\bin\Debug\System.Web.WebPages.Razor.xml
+D:\navya backup\Projects\jeevan\11272017\CTSImp1(3)\CTSImp1\CTSImp1.DataLayer\bin\Debug\System.Web.WebPages.xml
+D:\navya backup\Projects\jeevan\11272017\CTSImp1(3)\CTSImp1\CTSImp1.DataLayer\bin\Debug\System.Web.WebPages.Deployment.xml
+D:\navya backup\Projects\jeevan\11272017\CTSImp1(3)\CTSImp1\CTSImp1.DataLayer\bin\Debug\normidna.nlp
+D:\navya backup\Projects\jeevan\11272017\CTSImp1(3)\CTSImp1\CTSImp1.DataLayer\bin\Debug\normnfc.nlp
+D:\navya backup\Projects\jeevan\11272017\CTSImp1(3)\CTSImp1\CTSImp1.DataLayer\bin\Debug\normnfd.nlp
+D:\navya backup\Projects\jeevan\11272017\CTSImp1(3)\CTSImp1\CTSImp1.DataLayer\bin\Debug\normnfkc.nlp
+D:\navya backup\Projects\jeevan\11272017\CTSImp1(3)\CTSImp1\CTSImp1.DataLayer\bin\Debug\normnfkd.nlp
+D:\navya backup\Projects\jeevan\11272017\CTSImp1(3)\CTSImp1\CTSImp1.DataLayer\obj\Debug\CTSImp1.DataLayer.csprojResolveAssemblyReference.cache
+D:\navya backup\Projects\jeevan\11272017\CTSImp1(3)\CTSImp1\CTSImp1.DataLayer\obj\Debug\CTSImp1.DataLayer.dll
+D:\navya backup\Projects\jeevan\11272017\CTSImp1(3)\CTSImp1\CTSImp1.DataLayer\obj\Debug\CTSImp1.DataLayer.pdb
