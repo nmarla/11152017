@@ -1,132 +1,143 @@
-///////////////add this line viewmodel//////////////
-public string filterbyselectedtext { get; set; }
-///////////////add this line viewmodel//////////////
+///////////////tracking view model///////////////////
+public List<ReferralInfo> referralhistroy { get; set; }
+///////////////tracking view model///////////////////
 
-
-////////////////////userdetails controller code///////////
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Web;
-using System.Web.Mvc;
-using UserIssues.Models;
-using UserIssues.ViewModels;
-using UserIssues.Facade;
-
-namespace UserIssues.Controllers
-{
-    public class UserDetailsController : Controller
-    {
-        #region "Unitofwork Reference"
-
-        ITrackingBO _tackingBO = null;
-
-        public UserDetailsController(ITrackingBO tackingBO)
+///////////////tracking info controller///////////////////
+public ActionResult ViewReferralHistory(TrackingViewModel trackrefferalhistrory)
         {
-            this._tackingBO = tackingBO;
+            FillDropdowns();
+            int ccno = Convert.ToInt32(Session["ccnum"]);
+            List<ReferralInfo> referralhistrory = new List<ReferralInfo>();
+            referralhistrory = _tackingBO.getrefferalHistroy(ccno);
+            trackrefferalhistrory.referralhistroy = referralhistrory;
+            return View("TrackingInfo", trackrefferalhistrory);
         }
-        public UserDetailsController()
+///////////////tracking info controller///////////////////
+
+///////////////trackingbo layer///////////////////
+public List<ReferralInfo> getrefferalHistroy(int ccno)
         {
-            _tackingBO = new TrackingBO();
-        }
-
-        #endregion
-        // GET: UserDetails
-        //
-        // GET: /UserDetails/
-
-        public ActionResult Index()
-        {
-            TrackingViewModel trackuser = new TrackingViewModel();
-          //  string currentUser = "nmarla";
-            string currentUser = User.Identity.Name;
-            currentUser = currentUser.Split('\\')[1];
-            UserInfo userinfo = new UserInfo();
-            List<UserInfo> userDetails = new List<UserInfo>();
-            userDetails = _tackingBO.GetAllUserDetails(currentUser);
-            userinfo.first_name = userDetails[0].first_name;
-            userinfo.last_name = userDetails[0].last_name;
-            trackuser.userInfom = userinfo;
-            FilteritemsCategory();
-            return View("WelcomeSearchPV", trackuser);
-        }
-        public void FilteritemsCategory()
-        {
-            // TrackingViewModel trackvm = new TrackingViewModel();
-            List<SelectListItem> items = new List<SelectListItem>();
-
-            items.Add(new SelectListItem { Text = "CC NO", Value = "0", Selected = true });
-
-            items.Add(new SelectListItem { Text = "Comments", Value = "1" });
-
-            items.Add(new SelectListItem { Text = "Comedy", Value = "2" });
-
-            items.Add(new SelectListItem { Text = "Science Fiction", Value = "3" });
-
-            ViewBag.MovieType = items;
-            // trackvm.filterbyOptions = items;
-            //  return items;
-
-        }
-        public ActionResult DisplayData(TrackingViewModel trackvm, string searchterm = "")
-        {
-            string dropdownvalue = trackvm.filterbyselectedtext;
-            List<CorrCompInfo> gridData = new List<CorrCompInfo>();
-            gridData = _tackingBO.GetCorrcompIssues();
-            if (dropdownvalue == "0")
+            try
             {
-                int ccno = Convert.ToInt32(searchterm);
-                gridData = gridData.Where(s => s.cc_number.Equals(ccno)).ToList(); ;
+                ReferralInfo ReferalInfo = new ReferralInfo();
+                var result = _unitOfWork.Repository<ReferralInfo>().ExecuteProcedureForList("SP_ReferralHistroyofTicket @CCno ",
+                         new SqlParameter("@CCno ", SqlDbType.Int) { Value = ccno }).ToList();
+                ReferalInfo = result[0];
+                // result = result.Where(s => s.serv_req_number.Equals("doitt1")).ToList(); 
+                return result;
             }
-            else if (dropdownvalue == "2")
+            catch (Exception ex)
             {
-                gridData = gridData.Where(s => s.poc_other.Contains(searchterm)).ToList(); ;
+                //  log.Info("Error in Getting  details Of All Colleges" + ex);
+                throw ex;
             }
-            else
-            { }
-            return View(gridData);
         }
-    }
-}
-////////////////////userdetails controller code///////////
-/////////////////////welcome search partial view//////////////////
-@using UserIssues.Models;
+		
+///////////////trackingbo layer///////////////////
+
+///////////////////referralhistroypartailview/////////////
 @using UserIssues.ViewModels;
+@using UserIssues.Models;
 @model TrackingViewModel
 @{
-    ViewBag.Title = "WelcomeSearchPV";
+    ViewBag.Title = "ReferralPV";
     Layout = "";
 }
 
-  @using (Html.BeginForm())
-      {
-        <!--Welceom Bar with Search filter start-->
-        <div class="row gradientgray well">
-            <div class="col-md-8 col-xs-3 ">
-                @{
-                    var fullName = Model.userInfom.first_name + " " + Model.userInfom.last_name;
-                    <label> @Html.DisplayFor(model => fullName)</label>                 }
-
-            </div>
-            <div class="col-md-4 col-xs-9 text-right">
-                <div class="input-group">
-                    <div class="input-group-btn search-panel">
-                       @* <button type="button" class="btn btn-primary dropdown-toggle" id="search_concept" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Filter by <span class="caret"></span></button>
-                        <ul class="dropdown-menu">
-                            <li><a href="#TicketNo">Ticket No.</a></li>
-                        </ul>*@
-                        @Html.DropDownListFor(m => m.filterbyselectedtext,new SelectList(ViewBag.MovieType, "Value", "Text") ,new { @class = "btn btn-primary dropdown-toggle"})
-                    </div>
-                    <!-- /btn-group -->
-                    <input type="text" class="form-control" name="searchterm" id="search1term" aria-label="..." placeholder="Search term..." />
-                    <div class="input-group-btn search-panel">
-                        @*<button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><i class="glyphicon glyphicon-search"></i></button>*@
-                        <input type="submit" class="btn btn-primary dropdown-toggle" value="Search" formaction="DisplayData">
-                    </div>
+<div class="row">
+    <div class="col-sm-6 col-md-3">
+        <div class="form-group form-group-sm">
+            <label>Date of Referral:</label>
+            <div class='input-group date datepicker'>                
+                <div class="input-group col-md-5 dtReferral date" data-date="" data-date-format="MM dd yyyy" data-link-field="dtp_input2" data-link-format="yyyy-mm-dd">
+                    @Html.TextBoxFor(m => m.referralInfom.due_date, new { @class = "form-control", placeholder = "Click to show calendar", tabindex = 3, style = "width: 220px;" })
+                    <span class="input-group-addon"><span class="glyphicon glyphicon-calendar"></span></span>
                 </div>
             </div>
         </div>
-  }
-            <!--Welceom Bar with Search filter ends-->
-/////////////////////welcome search partial view//////////////////
+    </div>
+    <div class="col-sm-6 col-md-3">
+        <div class="form-group form-group-sm">
+            @Html.Label("lblRfrdTo", "Refered to:")
+            @Html.DropDownListFor(m => m.referralInfom.referred_to_group, new SelectList((IEnumerable<CTSCodeTable>)ViewData["ReferredTo"], "table_no", "short_description"), "---Select One--", new { @class = "form-control" })
+        </div>
+    </div>   
+    <div class="col-sm-6 col-md-3">
+        <div class="form-group form-group-sm">
+            @Html.Label("lblRfrlStatus", "Referred Status:")
+            @Html.DropDownListFor(m => m.referralInfom.referral_status, new SelectList((IEnumerable<CTSCodeTable>)ViewData["ReferredStatus"], "table_no", "short_description"), "---Select One--", new { @class = "form-control" })
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-12">
+        <div class="form-group form-group-sm">
+            @Html.Label("lblRfrlRfC", "Referrer Comments:")
+            @Html.TextAreaFor(m => m.referralInfom.comments)
+        </div>
+    </div>
+    <div class="col-sm-6 col-md-12">
+        <div class="form-group form-group-sm">
+            @Html.Label("lblRfrlReC", "Referee Comments:")
+            @Html.TextAreaFor(m => m.referralInfom.referral_rejected_comments)
+        </div>
+    </div>
+    <div class="col-md-12 margin-bottom">
+        <input type="submit" class="btn btn-primary btn-sm" formaction="SaveReferralInfo" value="Save Referral" id="btn_saveRefeeral">
+        <input type="submit" class="btn btn-primary btn-sm" formaction="AddNewReferral" value="Add New Referral"id="btn_addnewreferral">
+        @*<input type="button" class="btn btn-primary" value="Add New Referral" />*@
+        <input type="submit" class="btn btn-primary" value="View History" formaction="ViewReferralHistory" />
+    </div>
+</div>
+<div class="well">
+    <div class="row margin-bottom">
+        <div class="col-md-12">
 
+            <table class="table table-condensed table-hover">
+                <tr>
+                    <th style="border-top: 0px solid #136073;">Referral No.</th>
+                    <th style="border-top: 0px solid #136073;">Date of Referral</th>
+                    <th style="border-top: 0px solid #136073;">Referred From</th>
+                    <th style="border-top: 0px solid #136073;">Referred to</th>
+                    <th style="border-top: 0px solid #136073;">Complaint Handled By</th>
+                    <th style="border-top: 0px solid #136073;">Due Date</th>
+                    <th style="border-top: 0px solid #136073;">Comments of Referral / Resolution</th>
+                </tr>
+                            @if (Model.referralhistroy != null)
+                            {
+                                 foreach (var category in Model.referralhistroy)
+                                 {
+                                     <tr>
+                                          <td>@category.referral_id</td>
+                                         <td>@category.due_date</td>
+                                            <td>@category.referred_to_group</td>
+                                         <td>@category.comments</td>
+                                         <td>@category.referral_rejected_comments</td>
+                                        
+                                     </tr>
+                                 }
+                                
+                            }
+               @* @if (Model.referralhistroy.ToInt32() > 0)
+                {
+                    <tr></tr>
+                <tr></tr>
+                <tr></tr>
+                     
+                }*@
+                
+            </table>
+            
+        </div>
+    </div>
+</div>
+
+///////////////////referralhistroypartailview/////////////
+
+///////////////////////strored proc//////////////////
+
+
+CREATE PROCEDURE [dbo].[SP_ReferralHistroyofTicket] (@CCno Int)
+    As 
+select * from ReferralInfo where cc_number=@CCno
+GO
+
+///////////////////////strored proc//////////////////
