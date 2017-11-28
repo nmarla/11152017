@@ -1,0 +1,132 @@
+///////////////add this line viewmodel//////////////
+public string filterbyselectedtext { get; set; }
+///////////////add this line viewmodel//////////////
+
+
+////////////////////userdetails controller code///////////
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using UserIssues.Models;
+using UserIssues.ViewModels;
+using UserIssues.Facade;
+
+namespace UserIssues.Controllers
+{
+    public class UserDetailsController : Controller
+    {
+        #region "Unitofwork Reference"
+
+        ITrackingBO _tackingBO = null;
+
+        public UserDetailsController(ITrackingBO tackingBO)
+        {
+            this._tackingBO = tackingBO;
+        }
+        public UserDetailsController()
+        {
+            _tackingBO = new TrackingBO();
+        }
+
+        #endregion
+        // GET: UserDetails
+        //
+        // GET: /UserDetails/
+
+        public ActionResult Index()
+        {
+            TrackingViewModel trackuser = new TrackingViewModel();
+          //  string currentUser = "nmarla";
+            string currentUser = User.Identity.Name;
+            currentUser = currentUser.Split('\\')[1];
+            UserInfo userinfo = new UserInfo();
+            List<UserInfo> userDetails = new List<UserInfo>();
+            userDetails = _tackingBO.GetAllUserDetails(currentUser);
+            userinfo.first_name = userDetails[0].first_name;
+            userinfo.last_name = userDetails[0].last_name;
+            trackuser.userInfom = userinfo;
+            FilteritemsCategory();
+            return View("WelcomeSearchPV", trackuser);
+        }
+        public void FilteritemsCategory()
+        {
+            // TrackingViewModel trackvm = new TrackingViewModel();
+            List<SelectListItem> items = new List<SelectListItem>();
+
+            items.Add(new SelectListItem { Text = "CC NO", Value = "0", Selected = true });
+
+            items.Add(new SelectListItem { Text = "Comments", Value = "1" });
+
+            items.Add(new SelectListItem { Text = "Comedy", Value = "2" });
+
+            items.Add(new SelectListItem { Text = "Science Fiction", Value = "3" });
+
+            ViewBag.MovieType = items;
+            // trackvm.filterbyOptions = items;
+            //  return items;
+
+        }
+        public ActionResult DisplayData(TrackingViewModel trackvm, string searchterm = "")
+        {
+            string dropdownvalue = trackvm.filterbyselectedtext;
+            List<CorrCompInfo> gridData = new List<CorrCompInfo>();
+            gridData = _tackingBO.GetCorrcompIssues();
+            if (dropdownvalue == "0")
+            {
+                int ccno = Convert.ToInt32(searchterm);
+                gridData = gridData.Where(s => s.cc_number.Equals(ccno)).ToList(); ;
+            }
+            else if (dropdownvalue == "2")
+            {
+                gridData = gridData.Where(s => s.poc_other.Contains(searchterm)).ToList(); ;
+            }
+            else
+            { }
+            return View(gridData);
+        }
+    }
+}
+////////////////////userdetails controller code///////////
+/////////////////////welcome search partial view//////////////////
+@using UserIssues.Models;
+@using UserIssues.ViewModels;
+@model TrackingViewModel
+@{
+    ViewBag.Title = "WelcomeSearchPV";
+    Layout = "";
+}
+
+  @using (Html.BeginForm())
+      {
+        <!--Welceom Bar with Search filter start-->
+        <div class="row gradientgray well">
+            <div class="col-md-8 col-xs-3 ">
+                @{
+                    var fullName = Model.userInfom.first_name + " " + Model.userInfom.last_name;
+                    <label> @Html.DisplayFor(model => fullName)</label>                 }
+
+            </div>
+            <div class="col-md-4 col-xs-9 text-right">
+                <div class="input-group">
+                    <div class="input-group-btn search-panel">
+                       @* <button type="button" class="btn btn-primary dropdown-toggle" id="search_concept" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Filter by <span class="caret"></span></button>
+                        <ul class="dropdown-menu">
+                            <li><a href="#TicketNo">Ticket No.</a></li>
+                        </ul>*@
+                        @Html.DropDownListFor(m => m.filterbyselectedtext,new SelectList(ViewBag.MovieType, "Value", "Text") ,new { @class = "btn btn-primary dropdown-toggle"})
+                    </div>
+                    <!-- /btn-group -->
+                    <input type="text" class="form-control" name="searchterm" id="search1term" aria-label="..." placeholder="Search term..." />
+                    <div class="input-group-btn search-panel">
+                        @*<button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><i class="glyphicon glyphicon-search"></i></button>*@
+                        <input type="submit" class="btn btn-primary dropdown-toggle" value="Search" formaction="DisplayData">
+                    </div>
+                </div>
+            </div>
+        </div>
+  }
+            <!--Welceom Bar with Search filter ends-->
+/////////////////////welcome search partial view//////////////////
+
