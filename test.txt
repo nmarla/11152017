@@ -1,0 +1,10 @@
+<script type="text/javascript">
+    $(function () {
+        debugger;
+        var tabName = $("[id*=hiddenvalue]").val() != "" ? $("[id*=hiddenvalue]").val() : "ComplaintIncident";
+        $('#Tabs a[href="#' + tabName + '"]').tab('show');
+        $("#Tabs a").click(function () {alert();
+            $("[id*=hiddenvalue]").val($(this).attr("href").replace("#", ""));
+        });
+    });
+</script>
