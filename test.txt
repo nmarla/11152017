@@ -8,3 +8,9 @@
         });
     });
 </script>
+
+
+
+//////////////////refrerral partial view///////
+@Html.HiddenFor(m => m.hiddenvalue)
+//////////////////refrerral partial view///////
