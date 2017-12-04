@@ -66,3 +66,85 @@ BEGIN
 END
 
 GO
+
+
+////////////////////////////////mail////////////////////////
+ private void codeActivity1_ExecuteCode(object sender, EventArgs e)
+        {
+            int itemid = workflowProperties.Item.ID;
+            SPWeb web = workflowProperties.Web;
+            SPList WFListtest = workflowProperties.Web.Lists["employee"];
+            // SPList WFList = workflowProperties.Web.Lists["employee tax farms"];
+            SPListItem listitem = workflowProperties.Web.Lists["employee"].GetItemById(itemid);
+            string sitehomeURL = workflowProperties.Web.Site.Url.ToString();
+            string url = listitem.Url;
+            string to = "nmarla@primetgi.com";
+            string cc = "nmarla@primetgi.com";
+            string subject = "testing workflow";
+            string name = "name";
+            string body = "body";
+            SendEmailNotification(to, cc, subject, MessageBody(name, body, sitehomeURL), url, WFListtest, itemid,web);
+        }
+        public string MessageBody(string userName, string msgBody, string url)
+        {
+
+            return String.Format("<div style='background-color:#E3E7F2;width:400px;'><div style='padding-bottom:10px;width:400px;'>Dear {0},</div><div style='padding-bottom:10px;width:400px;'>&nbsp;</div><div style='width:400px;'> {1} .To view the request please <a href='{2}'>Click Here.</a></div><div style='padding-bottom:10px;width:400px;'>&nbsp;</div><div><b>Regards,</b></div><div style='padding-bottom:10px;width:400px;'><b>CH Team</b></div></div>", userName, msgBody, url);
+        }
+        public void SendEmailNotification(string to, string cc, string subject, string body, string Attachurl, SPList docList, int itemid,SPWeb web)
+        {
+            //Get the Sharepoint SMTP information from the SPAdministrationWebApplication
+            string smtpServer = SPAdministrationWebApplication.Local.OutboundMailServiceInstance.Server.Address;
+            //Get the Sharepoint sender information from the SPAdministrationWebApplication
+            string smtpFrom = SPAdministrationWebApplication.Local.OutboundMailSenderAddress;
+
+            //  GetToCCuserMailIDs();
+
+            MailMessage mailMessage = null;
+            if (!string.IsNullOrEmpty(to))
+            {
+                mailMessage = new MailMessage(smtpFrom, to);
+            }
+            if (!string.IsNullOrEmpty(cc))
+            {
+                if (string.IsNullOrEmpty(to))
+                {
+                    mailMessage = new MailMessage(smtpFrom, cc);
+                }
+                else
+                {
+                    mailMessage.CC.Add(cc);
+
+                }
+            }
+            //Get the file to be sent as an attachment
+            SPListItem listitem = docList.GetItemById(itemid);
+            SPAttachmentCollection filecoll = listitem.Attachments;
+            foreach (string fileName in filecoll)
+            {
+                SPFile file = web.GetFile(filecoll.UrlPrefix + fileName);
+                mailMessage.Attachments.Add(new Attachment(file.OpenBinaryStream(), file.Name));
+                // Do something ...
+            }
+            //foreach (SPFile file in filecoll)
+            //{
+            //    mailMessage.Attachments.Add(new Attachment(file.OpenBinaryStream(), file.Name));
+            //    // file = docList.ParentWeb.GetFile(Attachurl);
+            //}
+            // -- SPFile file = docList.ParentWeb.GetFile(Attachurl);
+
+            //Add the attachment
+            //-- mailMessage.Attachments.Add(new Attachment(file.OpenBinaryStream(), file.Name));
+            //System.Net.Mail.Attachment attachment;
+            //attachment = new System.Net.Mail.Attachment("your attachment file");
+            //mailMessage.Attachments.Add(attachment);
+            mailMessage.Subject = subject;
+            mailMessage.Body = body;
+            mailMessage.IsBodyHtml = true;
+            System.Net.WebClient webClient = new System.Net.WebClient();
+            webClient.Credentials = System.Net.CredentialCache.DefaultNetworkCredentials;
+            SmtpClient smtpClient = new SmtpClient(smtpServer);
+            smtpClient.Send(mailMessage);
+            webClient.Dispose();
+
+
+        }
