@@ -1,0 +1,103 @@
+USE [CTSDEV]
+GO
+
+/****** Object:  StoredProcedure [dbo].[SP_GetAllStaffUsersPerGroup]    Script Date: 03-12-2017 23:36:31 ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+
+
+CREATE PROCEDURE [dbo].[SP_GetAllStaffUsersPerGroup] (@usergroup varchar(20), @userrole varchar(20))
+AS
+BEGIN
+
+select UserInfo.*, UserUnitGroupInfo.user_unit,UserUnitGroupInfo.user_group from UserInfo
+INNER JOIN UserUnitGroupInfo ON UserInfo.usersinfo_id=UserUnitGroupInfo.usersinfo_id
+  WHERE user_group = @usergroup and user_role = @userrole
+
+END
+
+
+
+GO
+
+
+USE [CTSDEV]
+GO
+
+/****** Object:  StoredProcedure [dbo].[SP_GetUnitSupervisor]    Script Date: 03-12-2017 23:37:21 ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+
+
+CREATE PROCEDURE [dbo].[SP_GetUnitSupervisor] (@user_unit varchar(20), @user_role varchar(20))
+AS
+BEGIN
+
+select UserInfo.*, UserUnitGroupInfo.user_unit,UserUnitGroupInfo.user_group from UserInfo
+INNER JOIN UserUnitGroupInfo ON UserInfo.usersinfo_id=UserUnitGroupInfo.usersinfo_id
+WHERE user_unit = @user_unit and user_role = @user_role
+
+END
+
+
+
+GO
+
+
+USE [CTSDEV]
+GO
+
+/****** Object:  StoredProcedure [dbo].[SP_UserDetails]    Script Date: 03-12-2017 23:39:25 ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+
+CREATE PROCEDURE [dbo].[SP_UserDetails] (@users_id varchar(20))
+AS
+BEGIN
+
+select UserInfo.*, UserUnitGroupInfo.user_unit,UserUnitGroupInfo.user_group from UserInfo
+INNER JOIN UserUnitGroupInfo ON UserInfo.usersinfo_id=UserUnitGroupInfo.usersinfo_id
+  WHERE [users_id] = @users_id
+
+END
+
+
+GO
+
+
+USE [CTSDEV]
+GO
+
+/****** Object:  StoredProcedure [dbo].[SP_UserDetailsForID]    Script Date: 03-12-2017 23:39:51 ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE PROCEDURE [dbo].[SP_UserDetailsForID] (@usersinfo_id int)
+AS
+BEGIN
+
+SELECT UserInfo.*, UserUnitGroupInfo.user_unit,UserUnitGroupInfo.user_group
+FROM UserInfo
+LEFT JOIN UserUnitGroupInfo ON UserInfo.usersinfo_id=UserUnitGroupInfo.usersinfo_id 
+  WHERE [UserInfo].usersinfo_id = @usersinfo_id
+
+END
+GO
+
+
+

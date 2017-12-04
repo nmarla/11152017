@@ -1,0 +1,22 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using System.Web.UI.WebControls;
+
+namespace CTSImp1
+{
+    public class ExceptionLoggerAttribute : FilterAttribute, IExceptionFilter
+    {
+        private Facade.IExceptionsBO exLogger = new Facade.ExceptionsBO();
+
+        public void OnException(ExceptionContext filterContext)
+        {
+            Exception ex = filterContext.Exception;
+            exLogger.SaveLogData(ex);
+            filterContext.ExceptionHandled = true;
+            filterContext.Result = new RedirectResult("~/Error.html");
+        }
+    }
+}

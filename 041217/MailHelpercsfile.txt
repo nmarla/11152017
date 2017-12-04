@@ -1,0 +1,78 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.IO;
+using System.Net.Mail;
+
+namespace CTSImp1
+{
+
+    public class MailHelper
+    {
+        /// <summary>
+        /// This method is used to get the subject and body for sending emails
+        /// </summary>
+        public string MessageBody(string mailSendDateEng, string mailSendDateArb, string userNameEng, string userNameArb, string englishBody, string arabicBody)
+        {
+            //return String.Format("<table width='100%'><tr><td><div>Date: {0}</div></td><td align='right'> <div>{1}</div></td></tr><tr><td>Dear {2},</td><td align='right'>{3}</td></tr><tr><td><div>{4}</div></td><td align='right'><div>{5}</div></td></tr><tr><td colspan='2'>{6}</td></tr></table>", mailSendDateEng,mailSendDateArb, userNameEng,userNameArb, englishBody, arabicBody,image);
+            return String.Format("<table width='100%'><tr><td><div>Date: {0}</div></td><td align='right'> <div>{1}</div></td></tr><tr><td>Dear {2},</td><td align='right'>{3}</td></tr><tr><td><div>{4}</div></td><td align='right'><div>{5}</div></td></tr><tr><td style='padding-top: .5em'; colspan='2'><img alt=\"\" hspace=0 src=\"cid:imageId\" align=baseline border=0 ></td></tr></table>", mailSendDateEng, mailSendDateArb, userNameEng, userNameArb, englishBody, arabicBody);
+        }
+        /// <summary>
+        /// This method is used to send emails
+        /// </summary>
+        public void SendEmailNotification(string to, string cc, string subject, string body)
+        {
+
+            //Get the Sharepoint SMTP information from the SPAdministrationWebApplication
+            string smtpServer = "SMTP address"; //SPAdministrationWebApplication.Local.OutboundMailServiceInstance.Server.Address;
+            //Get the Sharepoint sender information from the SPAdministrationWebApplication
+            string smtpFrom = "smtp from address"; //SPAdministrationWebApplication.Local.OutboundMailSenderAddress;
+
+            //  GetToCCuserMailIDs();
+
+            MailMessage mailMessage = null;
+            if (!string.IsNullOrEmpty(to))
+            {
+                mailMessage = new MailMessage(smtpFrom, to);
+            }
+            if (!string.IsNullOrEmpty(cc))
+            {
+                if (string.IsNullOrEmpty(to))
+                {
+                    mailMessage = new MailMessage(smtpFrom, cc);
+                }
+                else
+                {
+                    mailMessage.CC.Add(cc);
+
+                }
+            }
+            mailMessage.Subject = subject;
+            mailMessage.Body = body;
+            mailMessage.IsBodyHtml = true;
+            System.Net.WebClient webClient = new System.Net.WebClient();
+            webClient.Credentials = System.Net.CredentialCache.DefaultNetworkCredentials;
+            SmtpClient smtpClient = new SmtpClient(smtpServer);
+            AlternateView htmlView = AlternateView.CreateAlternateViewFromString(body, null, "text/html");
+
+            LinkedResource imagelink = new LinkedResource(System.IO.Path.Combine(System.IO.Directory.GetCurrentDirectory(), "C:\\Program Files\\Common Files\\Microsoft Shared\\web server extensions\\12\\TEMPLATE\\IMAGES\\DECHRFooter.jpg"), "image/png");
+
+            imagelink.ContentId = "imageId";
+
+            imagelink.TransferEncoding = System.Net.Mime.TransferEncoding.Base64;
+
+            htmlView.LinkedResources.Add(imagelink);
+
+            mailMessage.AlternateViews.Add(htmlView);
+
+
+
+            smtpClient.Send(mailMessage);
+            webClient.Dispose();
+
+        }
+
+    }
+}
+

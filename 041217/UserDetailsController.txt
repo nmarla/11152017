@@ -1,0 +1,72 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using CTSImp1.Facade;
+using CTSImp1.Models;
+using CTSImp1.ViewModels;
+
+namespace CTSImp1.Controllers
+{
+    public class UserDetailsController : BaseController
+    {
+        #region "Unitofwork Reference"
+
+        ITrackingBO _tackingBO = null;
+
+        public UserDetailsController(ITrackingBO tackingBO)
+        {
+            this._tackingBO = tackingBO;
+        }
+        public UserDetailsController()
+        {
+            _tackingBO = new TrackingBO();
+        }
+
+        #endregion
+
+        //
+        // GET: /UserDetails/
+        [Authorize]
+        public ActionResult Index()
+        {
+           // WindowsIdentity identity = System.Web.HttpContext.Current.Request.LogonUserIdentity;
+            TrackingViewModel trackuser = new TrackingViewModel();
+            //  string currentUser = "nmarla";
+            //string currentUser = System.Web.HttpContext.Current.User.Identity.Name; //User.Identity.Name;
+            //currentUser = currentUser.Split('\\')[1];
+            //UserInfo userinfo = new UserInfo();
+            //List<UserInfo> userDetails = new List<UserInfo>();
+            //userDetails = _tackingBO.GetAllUserDetails(currentUser);
+            //userinfo.first_name = userDetails[0].first_name;
+            //userinfo.last_name = userDetails[0].last_name;
+            //trackuser.userInfom = userinfo;
+            var profileData = this.Session["UserProfile"] as UserInfo;
+            trackuser.userInfom = profileData;
+            FilteritemsCategory();
+            return PartialView("WelcomeSearch", trackuser);
+        }
+
+        public void FilteritemsCategory()
+        {
+            // TrackingViewModel trackvm = new TrackingViewModel();
+            List<SelectListItem> items = new List<SelectListItem>();
+
+            items.Add(new SelectListItem { Text = "Ticket No.", Value = "0" });
+
+            items.Add(new SelectListItem { Text = "PurPose of Contact", Value = "1" });
+
+            items.Add(new SelectListItem { Text = "Complaint/Inquiry from", Value = "2" });
+
+            items.Add(new SelectListItem { Text = "Incident Comments", Value = "3" });
+
+            items.Add(new SelectListItem { Text = "Resolution Comments", Value = "4" });
+
+            ViewBag.FilterBy = items;
+            // trackvm.filterbyOptions = items;
+            //  return items;
+
+        }
+    }
+}
