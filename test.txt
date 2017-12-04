@@ -1,0 +1,68 @@
+public ActionResult DisplayData(TrackingViewModel trackvm,string searchterm = "")
+        {
+            string dropdownvalue = trackvm.filterbyselectedtext;
+            List<CorrCompInfo> gridData = new List<CorrCompInfo>();
+          //  gridData = _tackingBO.GetItemsfordropdownsfromctscodetable(100);
+            gridData = _tackingBO.GetCorrcompIssues();
+            if (dropdownvalue == "0")
+            {
+                int ccno = Convert.ToInt32(searchterm);
+                gridData = gridData.Where(s => s.cc_number.Equals(ccno)).ToList(); ;
+                foreach (var rec in gridData)
+                {
+                    string purposeofcontact = rec.purpose_of_contact;
+                    rec.purpose_of_contact = _tackingBO.getshortdescription(purposeofcontact, 100);
+                    DateTime daterecd = Convert.ToDateTime(rec.date_recd).Date;
+                   // rec.date_recd = Convert.ToDateTime(rec.date_recd).ToShortDateString();
+                }
+                
+            }
+            else if (dropdownvalue == "2")
+            {
+                gridData = gridData.Where(s => s.poc_other.Contains(searchterm)).ToList(); ;
+                foreach (var rec in gridData)
+                {
+                    rec.purpose_of_contact = _tackingBO.getshortdescription("100", 100);
+                }
+            }
+            else
+            { }
+            return View(gridData);
+        }
+////////////////////// tracking bo/////////////
+public string getshortdescription(string tablecode, int tableno)
+        {
+            try
+            {
+                CTSCodeTable ctscodetable = new CTSCodeTable();
+                //  var result = _unitOfWork.Repository<CorrCompInfo>().ExecuteProcedureForList("SP_Test").ToList();
+                var result = _unitOfWork.Repository<CTSCodeTable>().ExecuteProcedureForList("SP_GetShortDescfromCTScodetable @table_code,@table_no ",
+                           new SqlParameter("@table_code ", SqlDbType.VarChar) { Value = tablecode },
+                            new SqlParameter("@table_no", SqlDbType.Int) { Value = tableno }).ToList();
+                ctscodetable = result[0];
+                //corrcompinfo.cc_number = Convert.ToInt32(result[0].cc_number);
+                //corrcompinfo.cc_date = Convert.ToDateTime(result[0].cc_date);
+                //corrcompinfo.cc_recdin = Convert.ToString(result[0].cc_recdin);
+                //corrcompinfo.purpose_of_contact = Convert.ToString(result[0].purpose_of_contact);
+
+
+
+                return ctscodetable.short_description;
+            }
+            catch (Exception ex)
+            {
+                //  log.Info("Error in Getting  details Of All Colleges" + ex);
+                throw ex;
+            }
+        }
+////////////////////// tracking bo/////////////
+///////////////////// stored proc//////////
+
+CREATE PROCEDURE [dbo].[SP_GetShortDescfromCTScodetable] (@table_code varchar(20),@table_no int)
+AS
+BEGIN
+
+	select * from ctscodetable where table_code=@table_code and table_no=@table_no
+END
+
+GO
