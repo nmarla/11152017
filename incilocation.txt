@@ -55,7 +55,7 @@ $('#corrcmpcontactInfo_dfta_id').on('change', function () {
  
          }
 //////////////fill details method in controller////////////
-///////////////////trackingbo layer//////////////////
+///////////////////trackingbo layer///////////////////
  public IncidentLocation GetIncidentLocation(string programtype)
         {
             try
