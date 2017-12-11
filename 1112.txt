@@ -714,6 +714,20 @@
             $("[id*=hiddenvalue]").val($(this).attr("href").replace("#", ""));
         });
     });
+
+
+ function uploadFile() {
+        debugger;
+        var filename = $('#UploadCOI').val();
+        if (filename == '') {
+            //Show error message or alert('please choose file');
+            alert('please select teh file');
+            return false;
+        }
+        else {
+            return true;
+        }
+    }
 </script>
 
 
