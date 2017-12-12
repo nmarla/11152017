@@ -1,2 +1,30 @@
-        var test = $("#referralInfom_comments_ifr").contents()[0].body;
+//////make the control read only////////////////     
+   var test = $("#referralInfom_comments_ifr").contents()[0].body;
         test.contentEditable = "false";
+
+///////file upload control validation////////////////
+
+ function uploadFile() {
+        debugger;
+        var filename = $('#UploadCOI').val();
+        if (filename == '') {
+            //Show error message or alert('please choose file');
+            alert('please select teh file');
+            return false;
+        }
+        else {
+            debugger;
+            var Re = /^(([a-zA-Z]:)|(\\{2}\w+)\$?)(\\(\w[\w].*))+(.jpeg|.JPEG|.jpg|.gif|.GIF| .png|.PNG)$/;
+            if (Re.test(filename) == false) {
+                alert('Please select valid Image');
+                return false;
+            }
+            else {
+
+                return true;
+            }
+        }
+
+    }
+
+//////file upload control validation////////////////
