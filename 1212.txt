@@ -1,0 +1,1453 @@
+USE [CTSDEV]
+GO
+
+/****** Object:  StoredProcedure [dbo].[SP_InsertUpdateCCTicket]    Script Date: 12/12/2017 4:48:43 AM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+ALTER PROCEDURE [dbo].[SP_InsertUpdateCCTicket]
+   (
+         @cc_number int
+        ,@purpose_of_contact varchar(20)
+	    ,@poc_other varchar(50)
+	    ,@cc_recdin varchar(20)
+	    ,@date_recd date
+	    ,@recd_by int
+	    ,@date_entered date
+	    ,@cc_date date
+	    ,@cc_status varchar(20)
+	    ,@serv_req_number varchar(50) 
+	    ,@resolution_status varchar(20)
+	    ,@mayor_date date
+	    ,@last_updated_by int
+		,@outccnum int out
+   )
+
+AS
+BEGIN
+if @cc_number = 0
+begin
+INSERT INTO [dbo].[CorrCompInfo]
+           (
+           [purpose_of_contact]
+			   ,[poc_other]
+			   ,[cc_recdin]
+			   ,[date_recd]
+			   ,[recd_by]
+			   ,[date_entered]
+			   ,[cc_date]
+			   ,[cc_status]
+			   ,[serv_req_number]
+			   ,[resolution_status]
+			   ,[mayor_date]
+			   ,[last_updated_by]
+			   )
+     VALUES
+           (      
+                @purpose_of_contact
+				,@poc_other
+				,@cc_recdin 
+				,@date_recd
+				,@recd_by
+				,@date_entered
+				,@cc_date
+				,@cc_status
+				,@serv_req_number
+				,@resolution_status
+	            ,@mayor_date
+	            ,@last_updated_by
+				)
+				                SELECT @outccnum = SCOPE_IDENTITY()
+
+END
+ELSE
+BEGIN
+ 
+UPDATE [dbo].[CorrCompInfo]
+   SET [purpose_of_contact]=@purpose_of_contact,
+			[poc_other]=@poc_other,
+			[cc_recdin]=@cc_recdin,
+			[date_recd]=@date_recd,
+			[recd_by]=@recd_by,
+			[date_entered]=@date_entered,
+			[cc_date]=@cc_date,
+			[cc_status]=@cc_status,
+			[serv_req_number]=@serv_req_number,
+			[resolution_status] = @resolution_status,
+			[mayor_date] = @mayor_date,
+			[last_updated_by] = @last_updated_by
+      
+ WHERE cc_number=@cc_number
+ 			  select @outccnum = cc_number from [CorrCompInfo] where [cc_number]=@cc_number
+
+
+ END
+
+ END
+
+-- exec SP_InsertUpdateCCTicket 345,'now','now','now','2017-11-11','2017-11-11',1,'2017-11-11','now','now','now','2017-11-11',1
+
+
+GO
+
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.Mvc;
+using CTSImp1.Facade;
+using CTSImp1.Models;
+using CTSImp1.ViewModels;
+using System.IO;
+using CTSImp1.Security;
+using System.Text.RegularExpressions;
+
+
+namespace CTSImp1.Controllers
+{
+    public class TrackingController : BaseController
+    {
+
+        //
+        // GET: /Tracking/
+        #region "Unitofwork Reference"
+
+        ITrackingBO _tackingBO = null;
+
+        public TrackingController(ITrackingBO tackingBO)
+        {
+            this._tackingBO = tackingBO;
+        }
+        public TrackingController()
+        {
+            _tackingBO = new TrackingBO();
+        }
+        #endregion
+        /// <summary>
+        /// Tracking view display
+        /// </summary>
+        /// <returns></returns>
+        [HttpGet]
+        [Authorize]
+        [RequireAuthentication]
+        public ActionResult TrackingInfo()
+        {
+            Session["ccnum"] = null;
+            FillDropdowndata();
+            TrackingViewModel trackingVM = new TrackingViewModel();
+            var profileData = this.Session["UserProfile"] as UserInfo;
+            trackingVM.userInfom = profileData;
+            return View("Tracking", trackingVM);
+        }
+        /// <summary>
+        /// Tracking view submit
+        /// </summary>
+        /// <param name="tackingviewmodel"></param>
+        /// <param name="file"></param>
+        /// <returns></returns>
+        [HttpPost]
+        [Authorize]
+        [RequireAuthentication]
+        public ActionResult TrackingInfo(TrackingViewModel tackingviewmodel)
+        {
+            FillDropdowndata();
+            if (Session["ccnum"] == null || !string.IsNullOrEmpty(tackingviewmodel.corrcmpInfo.cc_number.ToString()))
+            {
+                var profileData = this.Session["UserProfile"] as UserInfo;
+                int UserId = profileData.usersinfo_id;
+               int ccno = _tackingBO.InsertUpdateCCInfo(tackingviewmodel, UserId);
+               // int ccno = _tackingBO.GetLastccnumber();
+                _tackingBO.InsertUpdateCCCNTInfo(tackingviewmodel, ccno, UserId);
+                _tackingBO.InsertUpdateCCDetailsInfo(tackingviewmodel, ccno, UserId);
+                _tackingBO.InsertUpdateCorrCompDescResolution(tackingviewmodel, ccno, UserId);
+                ModelState.Clear();
+                tackingviewmodel.userInfom = profileData;
+                GetCTSTicketInfo(tackingviewmodel, ccno);
+                Session["ccnum"] = ccno;
+                return View("Tracking", tackingviewmodel);
+            }
+            else
+            {
+                int ccno = Convert.ToInt32(Session["ccnum"]);
+                tackingviewmodel.corrcmpInfo = _tackingBO.GetCCTKTByccno(ccno); ;
+                return View("Tracking", tackingviewmodel);
+            }
+        }
+
+
+        /// <summary>
+        /// Get tracking view for existing record
+        /// </summary>
+        /// <param name="ccno"></param>
+        /// <returns></returns>
+        [Authorize]
+        [RequireAuthentication]
+        public ActionResult DetailReport(int ccno)
+        {
+            TrackingViewModel trackingVM = new TrackingViewModel();
+            Session["ccnum"] = ccno;
+            FillDropdowndata();
+            var profileData = this.Session["UserProfile"] as UserInfo;
+            trackingVM.userInfom = profileData;
+            GetCTSTicketInfo(trackingVM, ccno);
+            return View("Tracking", trackingVM);
+        }
+
+        /// <summary>
+        /// Save complaint/inquiry tab information to DB
+        /// </summary>
+        /// <param name="trackcomplaint"></param>
+        /// <returns></returns>
+        [HttpPost]
+        [RequireAuthentication]
+        public ActionResult SaveComplaintInfo(TrackingViewModel trackcomplaint)
+        {
+            if (!string.IsNullOrEmpty(trackcomplaint.corrcmpInfo.cc_number.ToString()))
+            {
+                var profileData = this.Session["UserProfile"] as UserInfo;
+                trackcomplaint.userInfom = profileData;
+                int UserId = trackcomplaint.userInfom.usersinfo_id;
+                FillDropdowndata();
+                _tackingBO.InsertUpdateCCCNTInfo(trackcomplaint, trackcomplaint.corrcmpInfo.cc_number, UserId);
+                GetCTSTicketInfo(trackcomplaint, trackcomplaint.corrcmpInfo.cc_number);
+                return View("Tracking", trackcomplaint);
+            }
+            else
+            {
+                return View("Tracking");
+            }
+        }
+        /// <summary>
+        /// Save Referral tab information to DB
+        /// </summary>
+        /// <param name="trackreferral"></param>
+        /// <returns></returns>
+        [HttpPost]
+        [RequireAuthentication]
+        public ActionResult SaveReferralInfo(TrackingViewModel trackreferral)
+        {
+            if (!string.IsNullOrEmpty(trackreferral.corrcmpInfo.cc_number.ToString()))
+            {
+                var profileData = this.Session["UserProfile"] as UserInfo;
+                trackreferral.userInfom = profileData;
+                int UserId = trackreferral.userInfom.usersinfo_id;
+                ReferralInfo referral = new ReferralInfo();
+                referral = _tackingBO.GetCCReferralInfo(trackreferral.corrcmpInfo.cc_number);
+                int outrefid;
+                if (referral.referral_status == "2")
+                {
+                    outrefid = _tackingBO.InsertCCReferralInfo(trackreferral, trackreferral.corrcmpInfo.cc_number, UserId);
+                }
+                else
+                {
+                    outrefid = _tackingBO.InsertUpdateCCReferralInfo(trackreferral, trackreferral.corrcmpInfo.cc_number, UserId);
+                }
+               // referral = _tackingBO.GetreferalrecentID();
+               // int refid1 = referral.referral_id;
+                _tackingBO.InsertUpdateCCReferralText(trackreferral, trackreferral.corrcmpInfo.cc_number, UserId, outrefid);
+                _tackingBO.UpdateResStatus(trackreferral, trackreferral.corrcmpInfo.cc_number, 2, UserId);
+                MailHelper mailHelper = new MailHelper();
+                List<UserInfo> userDetails = new List<UserInfo>();
+                FillDropdowndata();
+                //to Unit supervisor when a new ticket is created
+                if (!string.IsNullOrEmpty(trackreferral.referralInfom.referred_to_group) && (trackreferral.referralInfom.referral_status == null))
+                {
+                    string unit = trackreferral.referralInfom.referred_to_unit;
+                    unit = _tackingBO.Getshortdescription(unit, 180);
+                    userDetails = _tackingBO.GetUnitSupervisor(unit, "Unit Supervisor");
+                    mailHelper.SendEmailNotification(userDetails[0].user_email, userDetails[0].user_email, "New CTS Ticket", MessageBody(userDetails[0].first_name, "Please resolve the ticket", Url.Action("DisplayDataSearch", "Tracking").ToString()));
+                }
+                //to CTS admin when a referral is rejected
+                if (!string.IsNullOrEmpty(trackreferral.referralInfom.referred_to_group) && (trackreferral.referralInfom.referral_status == "2"))
+                {
+                    userDetails = _tackingBO.GetCTSAdmin("CTS Admin");
+                    mailHelper.SendEmailNotification(userDetails[0].user_email, userDetails[0].user_email, "Referral Rejected", MessageBody(userDetails[0].first_name, "This ticket doesnot belong to our Unit", Url.Action("DisplayDataSearch", "Tracking").ToString()));
+                }
+                //to Group user when a new ticket is created
+                UserInfo userDetailsg = new UserInfo();
+                if (trackreferral.referralInfom.referral_status == "1")
+                {
+                    userDetailsg = _tackingBO.GetUserDetailsForID(trackreferral.referralInfom.cc_handled_by);
+                    mailHelper.SendEmailNotification(userDetailsg.user_email, userDetailsg.user_email, "New CTS Ticket", MessageBody(userDetailsg.first_name, "Please resolve the ticket", Url.Action("DisplayDataSearch", "Tracking").ToString()));
+                }
+                FillDropdowndata();
+                GetCTSTicketInfo(trackreferral, trackreferral.corrcmpInfo.cc_number);
+                return View("Tracking", trackreferral);
+            }
+            else
+            {
+                return View("Tracking");
+            }
+        }
+
+        //[HttpPost]
+        //[RequireAuthentication]
+        //public ActionResult AddNewReferral(TrackingViewModel newrefModel)
+        //{
+        //    if (!string.IsNullOrEmpty(newrefModel.corrcmpInfo.cc_number.ToString()))
+        //    {
+        //        HttpContext.Session["Newreferral"] = true;
+        //        FillDropdowndata();
+        //        GetCTSTicketInfo(newrefModel, newrefModel.corrcmpInfo.cc_number);
+        //        return View("Tracking", newrefModel);
+        //    }
+        //    else
+        //    {
+        //        return View("Tracking", newrefModel);
+        //    }
+        //}
+        /// <summary>
+        /// Save Resolution tab information to DB
+        /// </summary>
+        /// <param name="trackresolution"></param>
+        /// <returns></returns>
+        [HttpPost]
+        [RequireAuthentication]
+        public ActionResult SaveResolutionInfo(TrackingViewModel trackresolution)
+        {
+            try
+            {
+                if (!string.IsNullOrEmpty(trackresolution.corrcmpInfo.cc_number.ToString()))
+                {
+                    var profileData = this.Session["UserProfile"] as UserInfo;
+                    trackresolution.userInfom = profileData;
+                    int UserId = trackresolution.userInfom.usersinfo_id;
+                    _tackingBO.InsertUpdateCCResolutionInfo(trackresolution, trackresolution.corrcmpInfo.cc_number, UserId);
+                    _tackingBO.InsertUpdateCorrCompDescResolution(trackresolution, trackresolution.corrcmpInfo.cc_number, UserId);
+                    MailHelper mailHelper = new MailHelper();
+                    UserInfo userDetails = new UserInfo();
+                    List<UserInfo> userDetailsA = new List<UserInfo>();
+                    //to group user when the resolution is rejected
+                    if ((trackresolution.resolutionInfom.cc_handled_by != null && trackresolution.resolutionInfom.ref_resolution_status == "2"))
+                    {
+                        userDetails = _tackingBO.GetUserDetailsForID(trackresolution.referralInfom.cc_handled_by);
+                        mailHelper.SendEmailNotification(userDetails.user_email, userDetails.user_email, "Resolution rejected", MessageBody(userDetails.first_name, "Please resolve the ticket", Url.Action("DisplayDataSearch", "Tracking").ToString()));
+                    }
+                    //to CTS Admin when the resolution is approved by unit supervisor
+                    else if (trackresolution.resolutionInfom.ref_resolution_status == "1")
+                    {
+                        userDetailsA = _tackingBO.GetCTSAdmin("CTS Admin");
+                        mailHelper.SendEmailNotification(userDetailsA[0].user_email, userDetailsA[0].user_email, "CTS Ticket resolved", MessageBody(userDetails.first_name, "Please resolve the ticket", Url.Action("DisplayDataSearch", "Tracking").ToString()));
+                    }
+                    //to unit supervisor when the resolution is rejected by CTS Admin
+                    else if (trackresolution.resolutionInfom.ref_resolution_status == "4")
+                    {
+                        string unit = trackresolution.referralInfom.referred_to_unit;
+                        unit = _tackingBO.Getshortdescription(unit, 180);
+                        userDetailsA = _tackingBO.GetUnitSupervisor(unit, "Unit Supervisor");
+                        mailHelper.SendEmailNotification(userDetailsA[0].user_email, userDetailsA[0].user_email, "New CTS Ticket", MessageBody(userDetailsA[0].first_name, "Please resolve the ticket", Url.Action("DisplayDataSearch", "Tracking").ToString()));
+                    }
+                    //to Unit supervisor when the group user resolves the ticket
+                    else if (trackresolution.resolutionInfom.ref_resolution_status == null)
+                    {
+                        string unit = trackresolution.referralInfom.referred_to_unit;
+                        unit = _tackingBO.Getshortdescription(unit, 180);
+                        userDetailsA = _tackingBO.GetUnitSupervisor(unit, "Unit Supervisor");
+                        mailHelper.SendEmailNotification(userDetailsA[0].user_email, userDetailsA[0].user_email, "New CTS Ticket", MessageBody(userDetailsA[0].first_name, "CTS ticket has been resolved", Url.Action("DisplayDataSearch", "Tracking").ToString()));
+                    }
+                    //update resolution status when CTS Admin approves the ticket
+                    else if (trackresolution.resolutionInfom.ref_resolution_status == "3")
+                    {
+                        _tackingBO.UpdateResStatus(trackresolution, trackresolution.corrcmpInfo.cc_number, 3, UserId);
+                    }
+                    FillDropdowndata();
+                    GetCTSTicketInfo(trackresolution, trackresolution.corrcmpInfo.cc_number);
+                    return View("Tracking", trackresolution);
+                }
+                else
+                {
+                    return View("Tracking");
+                }
+            }
+            catch (Exception ex)
+            {
+                return View("Tracking");
+            }
+        }
+        /// <summary>
+        /// Save Attachments tab info
+        /// </summary>
+        /// <param name="trackattachment"></param>
+        /// <param name="file"></param>
+        /// <returns></returns>
+        [HttpPost]
+        [RequireAuthentication]
+        public ActionResult SaveAttachmentsInfo(TrackingViewModel trackattachment, HttpPostedFileBase file)
+        {
+            if (file != null && file.ContentLength > 0)
+            {
+                string _FileName = Path.GetFileName(file.FileName);
+                string _path = Server.MapPath("~/Uploads/");
+                if (!Directory.Exists(_path))
+                {
+                    Directory.CreateDirectory(_path);
+                }
+                _path = Path.Combine(_path, _FileName);
+                file.SaveAs(_path);
+                trackattachment.documentsInfom.file_name = _FileName;
+                trackattachment.documentsInfom.file_ext = Path.GetExtension(file.FileName);
+                trackattachment.documentsInfom.file_location = _path;
+                var profileData = this.Session["UserProfile"] as UserInfo;
+                trackattachment.userInfom = profileData;
+                int UserId = trackattachment.userInfom.usersinfo_id;
+                _tackingBO.InsertUpdateDocumentsInfo(trackattachment, trackattachment.corrcmpInfo.cc_number, UserId);
+                FillDropdowndata();
+                GetCTSTicketInfo(trackattachment, trackattachment.corrcmpInfo.cc_number);
+                return View("Tracking", trackattachment);
+            }
+            else
+            {
+                return View("Tracking");
+            }
+        }
+
+        public ActionResult ViewAttachment(string fileName)
+        {
+            var fs = System.IO.File.OpenRead(Server.MapPath("~/Uploads/" + fileName));
+            return File(fs, "application/jpg", fileName);
+        }
+
+        public ActionResult Deleteattachment(int docID, int ccno)
+        {
+            TrackingViewModel trackingVM = new TrackingViewModel();
+            _tackingBO.DeleteUpdateDocumentsInfo(docID);
+            FillDropdowndata();
+            var profileData = this.Session["UserProfile"] as UserInfo;
+            trackingVM.userInfom = profileData;
+            GetCTSTicketInfo(trackingVM, ccno);
+            return View("Tracking", trackingVM);
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="trackvm"></param>
+        /// <param name="searchterm"></param>
+        /// <returns></returns>
+        [RequireAuthentication]
+        public ActionResult DisplayData(TrackingViewModel trackvm, string searchterm = "")
+        {
+            string dropdownvalue = trackvm.filterbyselectedtext;
+            List<CorrCompInfo> gridData = new List<CorrCompInfo>();
+            gridData = _tackingBO.GetSearchTickets();
+            foreach (var rec in gridData)
+            {
+                string purposeofcontact = rec.purpose_of_contact;
+                rec.purpose_of_contact = _tackingBO.Getshortdescription(purposeofcontact, 110);
+                UserInfo userinfo = _tackingBO.GetUserDetailsForID(rec.recd_by);
+                rec.serv_req_number = string.Concat(userinfo.first_name, " ", userinfo.last_name);
+            }
+            if (dropdownvalue == "0")
+            {
+                int ccno = Convert.ToInt32(searchterm);
+                gridData = gridData.Where(s => s.cc_number.Equals(ccno)).ToList();
+            }
+            else if (dropdownvalue == "1")
+            {
+                gridData = gridData.Where(s => s.purpose_of_contact.Contains(searchterm)).ToList();
+            }
+            else if (dropdownvalue == "2")
+            {
+                gridData = gridData.Where(s => s.cc_recdin.Contains(searchterm)).ToList();
+            }
+            else if (dropdownvalue == "3")
+            {
+                gridData = _tackingBO.GetIncCommentsSearch(searchterm);
+            }
+            else if (dropdownvalue == "4")
+            {
+                gridData = _tackingBO.GetResCommentsSearch(searchterm);
+            }
+            else if (dropdownvalue == "5")
+            {
+                gridData = _tackingBO.GetResolvedSearchTickets();
+                if (searchterm == "")
+                {
+                    foreach (var rec in gridData)
+                    {
+                        string purposeofcontact = rec.purpose_of_contact;
+                        rec.purpose_of_contact = _tackingBO.Getshortdescription(purposeofcontact, 110);
+                        UserInfo userinfo = _tackingBO.GetUserDetailsForID(rec.recd_by);
+                        rec.serv_req_number = string.Concat(userinfo.first_name, " ", userinfo.last_name);
+                    }
+                }
+                else
+                {
+                    int ccno = Convert.ToInt32(searchterm);
+                    gridData = gridData.Where(s => s.cc_number.Equals(ccno)).ToList();
+                    foreach (var rec in gridData)
+                    {
+                        string purposeofcontact = rec.purpose_of_contact;
+                        rec.purpose_of_contact = _tackingBO.Getshortdescription(purposeofcontact, 110);
+                        UserInfo userinfo = _tackingBO.GetUserDetailsForID(rec.recd_by);
+                        rec.serv_req_number = string.Concat(userinfo.first_name, " ", userinfo.last_name);
+                    }
+                }
+            }
+            else if (dropdownvalue == "6")
+            {
+                gridData = _tackingBO.GetSearchTickets();
+                foreach (var rec in gridData)
+                {
+                    string purposeofcontact = rec.purpose_of_contact;
+                    rec.purpose_of_contact = _tackingBO.Getshortdescription(purposeofcontact, 110);
+                    UserInfo userinfo = _tackingBO.GetUserDetailsForID(rec.recd_by);
+                    rec.serv_req_number = string.Concat(userinfo.first_name, " ", userinfo.last_name);
+                }
+            }
+            return View("DisplayData", gridData);
+        }
+
+        [RequireAuthentication]
+        public ActionResult DisplayDataSearch(string searchterm = "")
+        {
+            List<CorrCompInfo> gridData = new List<CorrCompInfo>();
+            gridData = _tackingBO.GetSearchTickets();
+            foreach (var rec in gridData)
+            {
+                string purposeofcontact = rec.purpose_of_contact;
+                rec.purpose_of_contact = _tackingBO.Getshortdescription(purposeofcontact, 110);
+                UserInfo userinfo = _tackingBO.GetUserDetailsForID(rec.recd_by);
+                rec.serv_req_number = string.Concat(userinfo.first_name, " ", userinfo.last_name);
+            }
+            return View("DisplayData", gridData);
+        }
+
+        public ActionResult ViewReferralHistory(TrackingViewModel trackrefferalhistrory)
+        {
+            FillDropdowndata();
+            var profileData = this.Session["UserProfile"] as UserInfo;
+            trackrefferalhistrory.userInfom = profileData;
+            int ccno = Convert.ToInt32(Session["ccnum"]);
+            List<ReferralHistory> referralhistrory = new List<ReferralHistory>();
+            referralhistrory = _tackingBO.GetrefferalHistroy(ccno);
+            foreach (var refhis in referralhistrory)
+            {
+                string reftogroup = refhis.referred_to_group;
+                refhis.referred_to_group = _tackingBO.Getshortdescription(reftogroup, 260);
+                if (refhis.referrer_comments_text != null)
+                    refhis.referrer_comments_text = Regex.Replace(refhis.referrer_comments_text, "<.*?>", String.Empty);
+                if (refhis.referee_comments_text != null)
+                    refhis.referee_comments_text = Regex.Replace(refhis.referee_comments_text, "<.*?>", String.Empty);
+            }
+            trackrefferalhistrory.referralhistroynew = referralhistrory;
+            return View("Tracking", trackrefferalhistrory);
+        }
+        /// <summary>
+        /// Getting dropdown data from CTSCode table 
+        /// </summary>
+        public void FillDropdowndata()
+        {
+            List<CTSCodeTable> items = new List<CTSCodeTable>();
+            items = _tackingBO.GetItemsfordropdownsctscodetable();
+            ViewData["ComplaintEnquiry"] = items.Where(s => s.table_no.Equals(100)).ToList();
+            ViewData["PurposeOfContact"] = items.Where(s => s.table_no.Equals(110)).ToList();
+            ViewData["ComplaintStatus"] = items.Where(s => s.table_no.Equals(120)).ToList();
+            ViewData["ContractwithDFTA"] = items.Where(s => s.table_no.Equals(140)).ToList();
+            ViewData["IncidentLocation"] = items.Where(s => s.table_no.Equals(170)).ToList();
+            ViewData["ReferredToUnit"] = items.Where(s => s.table_no.Equals(180)).ToList();
+            ViewData["ReferredToGroup"] = new List<CTSCodeTable>();
+            ViewData["ReferredStatus"] = items.Where(s => s.table_no.Equals(190)).ToList();
+            ViewData["ResolutionHandledBy"] = new List<UserInfo>();// items.Where(s => s.table_no.Equals(200)).ToList();
+            var profileData = this.Session["UserProfile"] as UserInfo;
+            if (profileData.user_role == "Unit Supervisor")
+            {
+                ViewData["Referralresolutionstatus"] = items.Where(s => s.table_no.Equals(240) && (s.table_code == "1" || s.table_code == "2")).ToList();
+            }
+            else if (profileData.user_role == "CTS Admin")
+            {
+                ViewData["Referralresolutionstatus"] = items.Where(s => s.table_no.Equals(240) && (s.table_code == "3" || s.table_code == "4")).ToList();
+            }
+            else if (profileData.user_role == "Group User")
+            {
+                ViewData["Referralresolutionstatus"] = new List<CTSCodeTable>();
+            }
+            ViewData["ResolutionStatus"] = items.Where(s => s.table_no.Equals(210)).ToList();
+            ViewData["Category"] = items.Where(s => s.table_no.Equals(220)).ToList();
+            //budget table program type
+            List<BudgetCodeModel> itemsPT = new List<BudgetCodeModel>();
+            itemsPT = _tackingBO.GetBudgetProgramType(873);
+            ViewData["BudgetProgramType"] = itemsPT;
+            ViewData["BudgetProgramID"] = new List<BudgetCodeModelID>();
+        }
+
+        public void FillBudgetProgramID(TrackingViewModel trackbudgetmodel)
+        {
+            BudgetCodeModel budgetinfo = new BudgetCodeModel();
+            budgetinfo = _tackingBO.GetProgramNameFromDFTAID(trackbudgetmodel.corrcmpcontactInfo.dfta_id);
+            trackbudgetmodel.budgetccInfo = budgetinfo;
+        }
+
+        public void FillBudgetdftaID(TrackingViewModel trackbudgetmodel, string programtype, string dftaID)
+        {
+            List<BudgetCodeModelID> budgetinfo = _tackingBO.GetdftaIDDisp(programtype, dftaID);
+            ViewData["BudgetProgramID"] = budgetinfo;
+        }
+
+        public void FillReferredToGroup(TrackingViewModel referetogroupmodel)
+        {
+            List<CTSCodeTable> items = new List<CTSCodeTable>();
+            string unit = referetogroupmodel.referralInfom.referred_to_unit;
+            unit = _tackingBO.Getshortdescription(unit, 180);
+            items = _tackingBO.GetReferalGroup(unit);
+            ViewData["ReferredToGroup"] = items;
+        }
+        public void FillReferdToGroupUser(TrackingViewModel referedtogroupuser)
+        {
+            List<UserInfo> userDetails = new List<UserInfo>();
+            userDetails = _tackingBO.GetUserDetailsListForID(referedtogroupuser.referralInfom.cc_handled_by);
+            ViewData["ResolutionHandledBy"] = userDetails;
+        }
+        public void FillReferredToGroupUserForReferral(TrackingViewModel referetogroupmodel)
+        {
+            List<UserInfo> userDetails = new List<UserInfo>();
+            string group = referetogroupmodel.referralInfom.referred_to_group;
+            group = _tackingBO.Getshortdescription(group, 260);
+            userDetails = _tackingBO.GetAllStaffUsersPerGroup(group, "Group User");
+            ViewData["ResolutionHandledBy"] = userDetails;
+        }
+
+        public JsonResult FillModel(string value)
+        {
+            List<BudgetCodeModel> itemsPID = new List<BudgetCodeModel>();
+            itemsPID = _tackingBO.GetBudgetProgramID(value);
+            ViewData["BudgetProgramID"] = itemsPID;
+            List<SelectListItem> subcatlist = new List<SelectListItem>();
+            foreach (var item in itemsPID)
+            {
+                subcatlist.Add(new SelectListItem
+                {
+                    Text = item.data_value,
+                    Value = item.display_value
+                });
+            }
+            return Json(subcatlist, JsonRequestBehavior.AllowGet);
+        }
+
+        public JsonResult FillGroup(string value)
+        {
+            List<CTSCodeTable> items = new List<CTSCodeTable>();
+            items = _tackingBO.GetReferalGroup(value);
+            ViewData["ReferredToGroup"] = items;
+            List<SelectListItem> subcatlist = new List<SelectListItem>();
+            foreach (var item in items)
+            {
+                subcatlist.Add(new SelectListItem
+                {
+                    Text = item.table_code,
+                    Value = item.short_description
+                });
+            }
+            return Json(subcatlist, JsonRequestBehavior.AllowGet);
+        }
+
+        public JsonResult FillGroupUsers(string value)
+        {
+            List<UserInfo> userDetails = new List<UserInfo>();
+            userDetails = _tackingBO.GetAllStaffUsersPerGroup(value, "Group User");
+            ViewData["ResolutionHandledBy"] = userDetails;
+            List<SelectListItem> subcatlist = new List<SelectListItem>();
+            foreach (var item in userDetails)
+            {
+                subcatlist.Add(new SelectListItem
+                {
+                    Text = item.usersinfo_id.ToString(),
+                    Value = item.first_name
+                });
+            }
+            return Json(subcatlist, JsonRequestBehavior.AllowGet);
+        }
+
+        public JsonResult FillIncDetails(string value)
+        {
+            List<IncidentLocation> location = new List<IncidentLocation>();
+            location = _tackingBO.GetIncidentLocation(value);
+            if (location.Count > 0)
+            {
+                return Json(location[0].boro, JsonRequestBehavior.AllowGet);
+            }
+            else
+            {
+                string firstdft = value.Substring(0, 1);
+                return Json(firstdft, JsonRequestBehavior.AllowGet); ;
+            }
+        }
+
+        public JsonResult FillIncAddDetails(string value)
+        {
+            List<IncLocationAddress> locationAdd = new List<IncLocationAddress>();
+            locationAdd = _tackingBO.GetAddressDetails(value);
+            if (locationAdd.Count > 0)
+            {
+                return Json(locationAdd[0], JsonRequestBehavior.AllowGet);
+            }
+            else
+            {
+                return Json(0, JsonRequestBehavior.AllowGet); ;
+            }
+        }
+        /// <summary>
+        /// Get all fields data using ccno
+        /// </summary>
+        /// <param name="trackingVM"></param>
+        /// <param name="ccno"></param>
+        [NonAction]
+        public void GetCTSTicketInfo(TrackingViewModel trackingVM, int ccno)
+        {
+            trackingVM.corrcmpInfo = _tackingBO.GetCCTKTByccno(ccno);
+            trackingVM.corrcmpcontactInfo = _tackingBO.GetCCCNTInfo(ccno);
+            trackingVM.userInfom = _tackingBO.GetUserDetailsForID(trackingVM.corrcmpInfo.recd_by);
+            if (!string.IsNullOrEmpty(trackingVM.corrcmpcontactInfo.cont_with_dfta_yn))
+            {
+                if (trackingVM.corrcmpcontactInfo.cont_with_dfta_yn == "1")
+                {
+                    FillBudgetProgramID(trackingVM);
+                    FillBudgetdftaID(trackingVM, trackingVM.budgetccInfo.data_value, trackingVM.corrcmpcontactInfo.dfta_id);
+                }
+            }
+            trackingVM.inclocationinfo = _tackingBO.GetCCDetailsInfo(ccno);
+            trackingVM.ccDescInfo = _tackingBO.GetCCCommentsInfo(ccno);
+            trackingVM.referralInfom = _tackingBO.GetCCReferralInfo(ccno);
+            trackingVM.referralText = _tackingBO.GetCCReferralText(ccno);
+            if (!string.IsNullOrEmpty(trackingVM.referralInfom.referred_to_group))
+            {
+                FillReferredToGroup(trackingVM);
+                if (trackingVM.referralInfom.cc_handled_by != 0)
+                {
+                    FillReferdToGroupUser(trackingVM);
+                }
+                else if (trackingVM.referralInfom.cc_handled_by == 0)
+                {
+                    FillReferredToGroupUserForReferral(trackingVM);
+                }
+            }
+            trackingVM.resolutionInfom = _tackingBO.GetCCResolutionInfo(ccno);
+            if (trackingVM.resolutionInfom.ref_resolution_status != null)
+            {
+                string resSts = trackingVM.resolutionInfom.ref_resolution_status;
+                resSts = _tackingBO.Getshortdescription(resSts, 240);
+                trackingVM.resolutionInfom.current_status = resSts;
+            }
+            List<DocumentsInfo> docsinfo = new List<DocumentsInfo>();
+            docsinfo = _tackingBO.GetdocumentsHistroy(ccno);
+            foreach (var doc in docsinfo)
+            {
+                string category = doc.attachment_type;
+                doc.attachment_type = _tackingBO.Getshortdescription(category, 220);
+                UserInfo userinfo = _tackingBO.GetUserDetailsForID(doc.last_updated_by);
+                doc.record_status = string.Concat(userinfo.first_name, " ", userinfo.last_name);
+            }
+            trackingVM.documentshistroy = docsinfo;
+        }
+
+        [NonAction]
+        public string MessageBody(string userName, string msgBody, string url)
+        {
+            return String.Format("<div style='background-color:#E3E7F2;width:400px;'><div style='padding-bottom:10px;width:400px;'>Dear {0},</div><div style='padding-bottom:10px;width:400px;'>&nbsp;</div><div style='width:400px;'> {1} .To view the request please <a href='{2}'>Click Here.</a></div><div style='padding-bottom:10px;width:400px;'>&nbsp;</div><div><b>Regards,</b></div><div style='padding-bottom:10px;width:400px;'><b>CTS Team</b></div></div>", userName, msgBody, url);
+        }
+    }
+}
+
+using CTSImp1.Models;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using CTSImp1.ViewModels;
+
+namespace CTSImp1.Facade
+{
+   public interface ITrackingBO
+    {
+        List<CTSCodeTable> GetItemsfordropdownsctscodetable();
+        List<CTSCodeTable> GetReferalGroup(string unit);
+        string Getshortdescription(string tablecode, int tableno);
+        int GetLastccnumber();
+        List<UserInfo> GetAllUserDetails(string username);
+        List<UserInfo> GetUnitSupervisor(string userUnit, string userRole);
+        List<UserInfo> GetCTSAdmin(string userRole);
+        List<UserInfo> GetAllStaffUsersPerGroup(string usergroup, string userrole);
+        UserInfo GetUserDetailsForID(int id);
+        List<UserInfo> GetUserDetailsListForID(int id);
+        List<BudgetCodeModel> GetBudgetProgramType(int tableno);
+        List<BudgetCodeModel> GetBudgetProgramID(string program_type);
+        List<BudgetCodeModel> GetProgramNameFromDFTAID1(string dftaID);
+        // BudgetCodeModel GetdftaIDDisp(string programType, string dftaID);
+        List<BudgetCodeModelID> GetdftaIDDisp(string programType, string dftaID);
+        BudgetCodeModel GetProgramNameFromDFTAID(string dftaID);
+        CorrCompInfo GetCCTKTByccno(int ccno);
+        List<CorrCompInfo> GetSearchTickets();
+        List<CorrCompInfo> GetResolvedSearchTickets();
+        List<CorrCompInfo> GetIncCommentsSearch(string serarchterm);
+        List<CorrCompInfo> GetResCommentsSearch(string serarchterm);
+        CorrCompContactInfo GetCCCNTInfo(int ccno);
+        IncLocationInfo GetCCDetailsInfo(int ccno);
+        ReferralInfo GetCCReferralInfo(int ccno);
+        ReferralText GetCCReferralText(int ccno);
+        List<ReferralHistory> GetrefferalHistroy(int ccno);
+        ReferralInfo GetreferalrecentID();
+        List<DocumentsInfo> GetdocumentsHistroy(int ccno);
+        void DeleteUpdateDocumentsInfo(int attchmtID);
+        ResolutionInfo GetCCResolutionInfo(int ccno);
+        // DocumentsInfo GetCCAttachmentsInfo(int ccno);
+        //Details from program table
+        //int GetIncidentLocation(string dftaID);
+        List<IncidentLocation> GetIncidentLocation(string programtype);
+        List<IncLocationAddress> GetAddressDetails(string programtype);
+        CorrCompDescResolution GetCCCommentsInfo(int ccno);
+        int InsertUpdateCCInfo(TrackingViewModel CCInfoVM, int UserID);
+        void InsertUpdateCCCNTInfo(TrackingViewModel CCCNTInfoVM, int ccno, int UserId);
+        void InsertUpdateCCDetailsInfo(TrackingViewModel CCDetailsInfo, int ccno, int UserID);
+        int InsertUpdateCCReferralInfo(TrackingViewModel CCReferralInfo, int ccno, int UserID);
+        int InsertCCReferralInfo(TrackingViewModel CCReferralInfo, int ccno, int UserID);
+        void InsertUpdateCCReferralText(TrackingViewModel CCReferralText, int ccno, int UserID, int referralId);
+        void InsertUpdateCCResolutionInfo(TrackingViewModel CCResolutionInfo, int ccno, int UserID);
+        void InsertUpdateCorrCompDescResolution(TrackingViewModel CorrCompDescResolution, int ccno, int UserID);
+        void InsertUpdateDocumentsInfo(TrackingViewModel documentsVM, int ccno, int UserID);
+        void UpdateResStatus(TrackingViewModel resStatusVM, int ccno, int resstatus, int UserID);
+    }
+}
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using CTSImp1.Models;
+using CTSImp1.DataLayer;
+using System.Data;
+using System.Data.SqlClient;
+using CTSImp1.ViewModels;
+
+
+namespace CTSImp1.Facade
+{
+    public class TrackingBO : ITrackingBO
+    {
+        #region "Unitofwork Reference"
+        IUnitOfWork _unitOfWork = null;
+
+        public TrackingBO(IUnitOfWork _unitOfWork)
+        {
+            this._unitOfWork = _unitOfWork;
+        }
+        public TrackingBO()
+        {
+            _unitOfWork = new UnitOfWork();
+        }
+        #endregion
+
+        public List<CTSCodeTable> GetItemsfordropdownsctscodetable()
+        {
+            var result = _unitOfWork.Repository<CTSCodeTable>().ExecuteProcedureForList("SP_Dropdownitems").ToList();
+            return result;
+        }
+
+        public string Getshortdescription(string tablecode, int tableno)
+        {
+            CTSCodeTable ctscodetable = new CTSCodeTable();
+            var result = _unitOfWork.Repository<CTSCodeTable>().ExecuteProcedureForList("SP_GetShortDescfromCTScodetable @table_code,@table_no",
+                       new SqlParameter("@table_code ", SqlDbType.VarChar) { Value = tablecode },
+                        new SqlParameter("@table_no", SqlDbType.Int) { Value = tableno }).ToList();
+            ctscodetable = result[0];
+            return ctscodetable.short_description;
+        }
+
+        public List<CTSCodeTable> GetReferalGroup(string unit)
+        {
+            var result = _unitOfWork.Repository<CTSCodeTable>().ExecuteProcedureForList("SP_GetReferalGroup @check1_flag",
+                      new SqlParameter("@check1_flag", SqlDbType.VarChar) { Value = unit }).ToList();
+            return result;
+        }
+
+        public int GetLastccnumber()
+        {
+            var result = _unitOfWork.Repository<CorrCompInfo>().ExecuteProcedureForList("SP_GetLastCCNumber").ToList();
+            int lastccno = Convert.ToInt32(result[0].cc_number);
+            return lastccno;
+        }
+
+        public List<UserInfo> GetAllUserDetails(string UserID)
+        {
+            UserInfo userInfo = new UserInfo();
+            var userDetails = _unitOfWork.Repository<UserInfo>().ExecuteProcedureForList("SP_UserDetails @UserID",
+                       new SqlParameter("@UserID", SqlDbType.VarChar) { Value = UserID }).ToList();
+            return userDetails;
+        }
+
+        public List<UserInfo> GetUnitSupervisor(string userUnit, string userRole)
+        {
+            UserInfo userInfo = new UserInfo();
+            var userDetails = _unitOfWork.Repository<UserInfo>().ExecuteProcedureForList("SP_GetUnitSupervisor @user_unit,@user_role",
+                       new SqlParameter("@user_unit", SqlDbType.VarChar) { Value = userUnit },
+                       new SqlParameter("@user_role", SqlDbType.VarChar) { Value = userRole }).ToList();
+            return userDetails;
+        }
+
+        public List<UserInfo> GetCTSAdmin(string userRole)
+        {
+            UserInfo userInfo = new UserInfo();
+            var userDetails = _unitOfWork.Repository<UserInfo>().ExecuteProcedureForList("SP_GetCTSAdmin @user_role",
+                       new SqlParameter("@user_role", SqlDbType.VarChar) { Value = userRole }).ToList();
+            return userDetails;
+        }
+
+        public List<UserInfo> GetAllStaffUsersPerGroup(string usergroup, string userrole)
+        {
+            UserInfo userInfo = new UserInfo();
+            var userDetails = _unitOfWork.Repository<UserInfo>().ExecuteProcedureForList("SP_GetAllStaffUsersPerGroup @usergroup,@userrole",
+                       new SqlParameter("@usergroup", SqlDbType.VarChar) { Value = usergroup },
+                       new SqlParameter("@userrole", SqlDbType.VarChar) { Value = userrole }).ToList();
+            return userDetails;
+        }
+
+        public UserInfo GetUserDetailsForID(int id)
+        {
+            UserInfo userInfo = new UserInfo();
+            var userDetails = _unitOfWork.Repository<UserInfo>().ExecuteProcedureForList("SP_UserDetailsForID @usersinfo_id",
+                       new SqlParameter("@usersinfo_id", SqlDbType.Int) { Value = id }).ToList();
+            userInfo = userDetails[0];
+            return userInfo;
+        }
+
+        public List<UserInfo> GetUserDetailsListForID(int id)
+        {
+            var userDetails = _unitOfWork.Repository<UserInfo>().ExecuteProcedureForList("SP_UserDetailsForID @usersinfo_id",
+                       new SqlParameter("@usersinfo_id", SqlDbType.Int) { Value = id }).ToList();
+            return userDetails;
+        }
+
+        public UserInfo GetUserDetailsWelcome(string username)
+        {
+            UserInfo userinfo = new UserInfo();
+            var result = _unitOfWork.Repository<UserInfo>().ExecuteProcedureForList("SP_UserDetails @UserID",
+                       new SqlParameter("@UserID ", SqlDbType.VarChar) { Value = username }).ToList();
+            userinfo = result[0];
+            return userinfo;
+        }
+
+        //budget table
+        public List<BudgetCodeModel> GetBudgetProgramType(int tblno)
+        {
+            var budgetPT = _unitOfWork.Repository<BudgetCodeModel>().ExecuteProcedureForList("uspGetProgramType @table_no",
+                       new SqlParameter("@table_no", SqlDbType.Int) { Value = tblno }).ToList();
+            return budgetPT;
+        }
+
+        public List<BudgetCodeModel> GetBudgetProgramID(string program_type)
+        {
+            var budgetPID = _unitOfWork.Repository<BudgetCodeModel>().ExecuteProcedureForList("uspGetProgramName @program_type",
+                       new SqlParameter("@program_type", SqlDbType.VarChar) { Value = program_type }).ToList();
+            return budgetPID;
+        }
+
+        public List<BudgetCodeModel> GetProgramNameFromDFTAID1(string dftaid)
+        {
+            var result = _unitOfWork.Repository<BudgetCodeModel>().ExecuteProcedureForList("SP_GetProgramNameFromDFTAID @dftaID",
+                   new SqlParameter("@dftaID ", SqlDbType.VarChar) { Value = dftaid }).ToList();
+            return result;
+        }
+
+        public List<BudgetCodeModelID> GetdftaIDDisp(string programtype, string dftaID)
+        {
+            var result = _unitOfWork.Repository<BudgetCodeModelID>().ExecuteProcedureForList("uspGetdftaIDDisp @program_type, @dftaID",
+                           new SqlParameter("@program_type ", SqlDbType.VarChar) { Value = programtype },
+                           new SqlParameter("@dftaID ", SqlDbType.VarChar) { Value = dftaID }).ToList();
+            return result;
+        }
+
+        public CorrCompInfo GetCCTKTByccno(int ccno)
+        {
+            CorrCompInfo corrcompinfo = new CorrCompInfo();
+            var result = _unitOfWork.Repository<CorrCompInfo>().ExecuteProcedureForList("SP_GetTicketsbyccno @CCno",
+                       new SqlParameter("@CCno ", SqlDbType.VarChar) { Value = ccno }).ToList();
+            if (result.Count > 0)
+            {
+                corrcompinfo = result[0];
+                return corrcompinfo;
+            }
+            else
+            {
+                return corrcompinfo;
+            }
+        }
+
+        public List<CorrCompInfo> GetSearchTickets()
+        {
+            var result = _unitOfWork.Repository<CorrCompInfo>().ExecuteProcedureForList("SP_GetTickets").ToList();
+            return result;
+        }
+        public List<CorrCompInfo> GetResolvedSearchTickets()
+        {
+            var result = _unitOfWork.Repository<CorrCompInfo>().ExecuteProcedureForList("SP_GetResolvedTickets").ToList();
+            return result;
+        }
+
+
+        public List<CorrCompInfo> GetIncCommentsSearch(string serarchterm)
+        {
+            var result = _unitOfWork.Repository<CorrCompInfo>().ExecuteProcedureForList("SP_GetIncCommentsSearch @searchterm",
+                       new SqlParameter("@searchterm ", SqlDbType.VarChar) { Value = serarchterm }).ToList();
+            return result;
+        }
+
+        public List<CorrCompInfo> GetResCommentsSearch(string serarchterm)
+        {
+            var result = _unitOfWork.Repository<CorrCompInfo>().ExecuteProcedureForList("SP_GetResCommentsSearch @searchterm",
+                       new SqlParameter("@searchterm ", SqlDbType.VarChar) { Value = serarchterm }).ToList();
+            return result;
+        }
+
+        public CorrCompContactInfo GetCCCNTInfo(int ccno)
+        {
+            CorrCompContactInfo ccCntInfo = new CorrCompContactInfo();
+            var result = _unitOfWork.Repository<CorrCompContactInfo>().ExecuteProcedureForList("SP_GetCCCNTInfo @CCno",
+                       new SqlParameter("@CCno ", SqlDbType.VarChar) { Value = ccno }).ToList();
+            if (result.Count > 0)
+            {
+                ccCntInfo = result[0];
+                return ccCntInfo;
+            }
+            else
+            {
+                return ccCntInfo;
+            }
+        }
+
+        public BudgetCodeModel GetProgramNameFromDFTAID(string dftaID)
+        {
+            BudgetCodeModel budcodemodel = new BudgetCodeModel();
+            var result = _unitOfWork.Repository<BudgetCodeModel>().ExecuteProcedureForList("SP_GetProgramNameFromDFTAID @dftaID",
+                          new SqlParameter("@dftaID ", SqlDbType.VarChar) { Value = dftaID }).ToList();
+            if (result.Count > 0)
+            {
+                budcodemodel = result[0];
+                return budcodemodel;
+            }
+            return null;
+        }
+
+        public IncLocationInfo GetCCDetailsInfo(int ccno)
+        {
+            IncLocationInfo ccDetailsInfo = new IncLocationInfo();
+            var result = _unitOfWork.Repository<IncLocationInfo>().ExecuteProcedureForList("SP_GetCCDetailsInfo @CCno",
+                       new SqlParameter("@CCno ", SqlDbType.VarChar) { Value = ccno }).ToList();
+            if (result.Count > 0)
+            {
+                ccDetailsInfo = result[0];
+                return ccDetailsInfo;
+            }
+            else
+            {
+                return ccDetailsInfo;
+            }
+        }
+
+        public ReferralInfo GetCCReferralInfo(int ccno)
+        {
+            ReferralInfo ccReferalInfo = new ReferralInfo();
+            var result = _unitOfWork.Repository<ReferralInfo>().ExecuteProcedureForList("SP_GetCCReferralInfo @CCno",
+                       new SqlParameter("@CCno ", SqlDbType.VarChar) { Value = ccno }).ToList();
+            if (result.Count > 0)
+            {
+                ccReferalInfo = result[0];
+                return ccReferalInfo;
+            }
+            else
+            {
+                return ccReferalInfo;
+            }
+        }
+        public ReferralText GetCCReferralText(int ccno)
+        {
+
+            ReferralText ccReferalText = new ReferralText();
+            var result = _unitOfWork.Repository<ReferralText>().ExecuteProcedureForList("SP_GetCCReferralText @CCno",
+                       new SqlParameter("@CCno ", SqlDbType.VarChar) { Value = ccno }).ToList();
+            if (result.Count > 0)
+            {
+                ccReferalText = result[0];
+                return ccReferalText;
+            }
+            else
+            {
+                return ccReferalText;
+            }
+
+        }
+
+        public ResolutionInfo GetCCResolutionInfo(int ccno)
+        {
+            ResolutionInfo ccResolutionInfo = new ResolutionInfo();
+            var result = _unitOfWork.Repository<ResolutionInfo>().ExecuteProcedureForList("SP_GetCCResolutionInfo @CCno",
+                       new SqlParameter("@CCno ", SqlDbType.VarChar) { Value = ccno }).ToList();
+            if (result.Count > 0)
+            {
+                ccResolutionInfo = result[0];
+                return ccResolutionInfo;
+            }
+            else
+            {
+                return ccResolutionInfo;
+            }
+        }
+
+        //public DocumentsInfo GetCCAttachmentsInfo(int ccno)
+        //{
+        //    try
+        //    {
+        //        DocumentsInfo ccDocumentsInfo = new DocumentsInfo();
+        //        var result = _unitOfWork.Repository<DocumentsInfo>().ExecuteProcedureForList("SP_GetCCAttachmentsInfo @CCno",
+        //                   new SqlParameter("@CCno ", SqlDbType.VarChar) { Value = ccno }).ToList();
+        //        ccDocumentsInfo = result[0];
+        //        return ccDocumentsInfo;
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        throw ex;
+        //    }
+
+        //}
+        public CorrCompDescResolution GetCCCommentsInfo(int ccno)
+        {
+            CorrCompDescResolution cccommentsInfo = new CorrCompDescResolution();
+            var result = _unitOfWork.Repository<CorrCompDescResolution>().ExecuteProcedureForList("SP_GetCCCommentsInfo @CCno",
+                       new SqlParameter("@CCno ", SqlDbType.VarChar) { Value = ccno }).ToList();
+            if (result.Count > 0)
+            {
+                cccommentsInfo = result[0];
+                return cccommentsInfo;
+            }
+            else
+            {
+                return cccommentsInfo;
+            }
+        }
+
+        public List<ReferralHistory> GetrefferalHistroy(int ccno)
+        {
+            var result = _unitOfWork.Repository<ReferralHistory>().ExecuteProcedureForList("SP_ReferralHistroyofTicket @CCno ",
+                     new SqlParameter("@CCno ", SqlDbType.Int) { Value = ccno }).ToList();
+            return result;
+        }
+
+        public ReferralInfo GetreferalrecentID()
+        {
+            ReferralInfo referalid = new ReferralInfo();
+            var result = _unitOfWork.Repository<ReferralInfo>().ExecuteProcedureForList("SP_GetLatestreferalID").ToList();
+            if (result.Count > 0)
+            {
+                referalid = result[0];
+                return referalid;
+            }
+            return null;
+        }
+
+
+        public List<DocumentsInfo> GetdocumentsHistroy(int ccno)
+        {
+            var result = _unitOfWork.Repository<DocumentsInfo>().ExecuteProcedureForList("SP_documentHistroyofTicket @CCno ",
+                         new SqlParameter("@CCno ", SqlDbType.Int) { Value = ccno }).ToList();
+            return result;
+        }
+
+        public List<IncidentLocation> GetIncidentLocation(string programtype)
+        {
+            var result = _unitOfWork.Repository<IncidentLocation>().ExecuteProcedureForList("SP_GetIncidentLocation @dfta_id",
+                               new SqlParameter("@dfta_id ", SqlDbType.VarChar) { Value = programtype }).ToList();
+            return result;
+        }
+        public List<IncLocationAddress> GetAddressDetails(string programtype)
+        {
+            var result = _unitOfWork.Repository<IncLocationAddress>().ExecuteProcedureForList("SP_GetAddressDetails @dfta_id",
+                               new SqlParameter("@dfta_id ", SqlDbType.VarChar) { Value = programtype }).ToList();
+            return result;
+        }
+
+        public int InsertUpdateCCInfo(TrackingViewModel CCInfoVM, int userID)
+        {
+            CorrCompInfo corrcompinfo = new CorrCompInfo();
+            corrcompinfo.cc_number = CCInfoVM.corrcmpInfo.cc_number;
+            corrcompinfo.purpose_of_contact = CCInfoVM.corrcmpInfo.purpose_of_contact;
+            corrcompinfo.poc_other = CCInfoVM.corrcmpInfo.poc_other;
+            corrcompinfo.cc_recdin = CCInfoVM.corrcmpInfo.cc_recdin;
+            corrcompinfo.date_entered = CCInfoVM.corrcmpInfo.date_entered;
+            corrcompinfo.date_recd = CCInfoVM.corrcmpInfo.date_recd;
+            corrcompinfo.recd_by = userID;
+            corrcompinfo.cc_date = CCInfoVM.corrcmpInfo.cc_date;
+            corrcompinfo.cc_status = CCInfoVM.corrcmpInfo.cc_status;
+            corrcompinfo.serv_req_number = CCInfoVM.corrcmpInfo.serv_req_number;
+            corrcompinfo.resolution_status = "1";
+            corrcompinfo.mayor_date = CCInfoVM.corrcmpInfo.mayor_date;
+            corrcompinfo.last_updated_by = userID;
+            corrcompinfo.tstamp = DateTime.Now;
+            SqlParameter outRccIdSqlParam = new SqlParameter("@outccnum", SqlDbType.Int) { Direction = ParameterDirection.Output, Value = 0 };
+
+            var result = _unitOfWork.Repository<CorrCompInfo>().ExecuteProcedure("SP_InsertUpdateCCTicket @cc_number,@purpose_of_contact,@poc_other,@cc_recdin,@date_recd,@recd_by,@date_entered,@cc_date,@cc_status,@serv_req_number,@resolution_status,@mayor_date,@last_updated_by,@outccnum out",
+                          new SqlParameter("@cc_number", SqlDbType.Int) { Value = CCInfoVM.corrcmpInfo.cc_number },
+                          new SqlParameter("@purpose_of_contact", SqlDbType.VarChar) { Value = string.IsNullOrEmpty(corrcompinfo.purpose_of_contact) ? (object)DBNull.Value : corrcompinfo.purpose_of_contact },
+                          new SqlParameter("@poc_other", SqlDbType.VarChar) { Value = string.IsNullOrEmpty(corrcompinfo.poc_other) ? (object)DBNull.Value : corrcompinfo.poc_other },
+                          new SqlParameter("@cc_recdin", SqlDbType.VarChar) { Value = string.IsNullOrEmpty(corrcompinfo.cc_recdin) ? (object)DBNull.Value : corrcompinfo.cc_recdin },
+                          new SqlParameter("@date_recd", SqlDbType.Date) { Value = corrcompinfo.date_recd },
+                          new SqlParameter("@recd_by", SqlDbType.Int) { Value = corrcompinfo.recd_by },
+                          new SqlParameter("@date_entered", SqlDbType.Date) { Value = corrcompinfo.date_entered },
+                          new SqlParameter("@cc_date", SqlDbType.Date) { Value = corrcompinfo.cc_date },
+                          new SqlParameter("@cc_status", SqlDbType.VarChar) { Value = string.IsNullOrEmpty(corrcompinfo.cc_status) ? (object)DBNull.Value : corrcompinfo.cc_status },
+                          new SqlParameter("@serv_req_number", SqlDbType.VarChar) { Value = string.IsNullOrEmpty(corrcompinfo.serv_req_number) ? (object)DBNull.Value : corrcompinfo.serv_req_number },
+                          new SqlParameter("@resolution_status", SqlDbType.VarChar) { Value = string.IsNullOrEmpty(corrcompinfo.resolution_status) ? (object)DBNull.Value : corrcompinfo.resolution_status },
+                          new SqlParameter("@mayor_date", SqlDbType.Date) { Value = DBNull.Value },
+                          new SqlParameter("@last_updated_by", SqlDbType.Int) { Value = corrcompinfo.last_updated_by },
+                          outRccIdSqlParam);
+            int outrefid = (int)outRccIdSqlParam.Value;
+            return outrefid;
+        }
+
+
+
+        public void InsertUpdateCCCNTInfo(TrackingViewModel CCCNTInfoVM, int ccno, int UserID)
+        {
+            //// CorrCompContactInfo table
+            CorrCompContactInfo corrcompCntInfo = new CorrCompContactInfo();
+            CCCNTInfoVM.corrcmpInfo.cc_number = ccno;
+            corrcompCntInfo.fname = CCCNTInfoVM.corrcmpcontactInfo.fname;
+            corrcompCntInfo.lname = CCCNTInfoVM.corrcmpcontactInfo.lname;
+            corrcompCntInfo.tel_number = CCCNTInfoVM.corrcmpcontactInfo.tel_number;
+            corrcompCntInfo.email_add = CCCNTInfoVM.corrcmpcontactInfo.email_add;
+            corrcompCntInfo.street_add = CCCNTInfoVM.corrcmpcontactInfo.street_add;
+            corrcompCntInfo.city = CCCNTInfoVM.corrcmpcontactInfo.city;
+            corrcompCntInfo.state = CCCNTInfoVM.corrcmpcontactInfo.state;
+            corrcompCntInfo.zipcode = CCCNTInfoVM.corrcmpcontactInfo.zipcode;
+            corrcompCntInfo.cont_with_dfta_yn = CCCNTInfoVM.corrcmpcontactInfo.cont_with_dfta_yn;
+            corrcompCntInfo.dfta_id = CCCNTInfoVM.corrcmpcontactInfo.dfta_id;
+            corrcompCntInfo.other_site_name = CCCNTInfoVM.corrcmpcontactInfo.other_site_name;
+            corrcompCntInfo.tstamp = DateTime.Now;
+            var result1 = _unitOfWork.Repository<CorrCompInfo>().ExecuteProcedure("SP_InsertUpdateCorrCompContactInfo @cc_number,@fname,@lname,@tel_number,@email_add,@street_add,@city,@state,@zipcode,@zipcode2,@cont_with_dfta_yn,@dfta_id,@other_site_name,@last_updated_by,@tstamp",
+                          new SqlParameter("@cc_number", SqlDbType.Int) { Value = CCCNTInfoVM.corrcmpInfo.cc_number },
+                          new SqlParameter("@fname", SqlDbType.VarChar) { Value = string.IsNullOrEmpty(corrcompCntInfo.fname) ? (object)DBNull.Value : corrcompCntInfo.fname },
+                          new SqlParameter("@lname", SqlDbType.VarChar) { Value = string.IsNullOrEmpty(corrcompCntInfo.lname) ? (object)DBNull.Value : corrcompCntInfo.lname },
+                          new SqlParameter("@tel_number", SqlDbType.VarChar) { Value = string.IsNullOrEmpty(corrcompCntInfo.tel_number) ? (object)DBNull.Value : corrcompCntInfo.tel_number },
+                          new SqlParameter("@email_add", SqlDbType.VarChar) { Value = string.IsNullOrEmpty(corrcompCntInfo.email_add) ? (object)DBNull.Value : corrcompCntInfo.email_add },
+                          new SqlParameter("@street_add", SqlDbType.VarChar) { Value = string.IsNullOrEmpty(corrcompCntInfo.street_add) ? (object)DBNull.Value : corrcompCntInfo.street_add },
+                          new SqlParameter("@city", SqlDbType.VarChar) { Value = string.IsNullOrEmpty(corrcompCntInfo.city) ? (object)DBNull.Value : corrcompCntInfo.city },
+                          new SqlParameter("@state", SqlDbType.Char) { Value = string.IsNullOrEmpty(corrcompCntInfo.state) ? (object)DBNull.Value : corrcompCntInfo.state },
+                          new SqlParameter("@zipcode", SqlDbType.Char) { Value = string.IsNullOrEmpty(corrcompCntInfo.zipcode) ? (object)DBNull.Value : corrcompCntInfo.zipcode },
+                          new SqlParameter("@zipcode2", SqlDbType.Char) { Value = string.IsNullOrEmpty(corrcompCntInfo.zipcode) ? (object)DBNull.Value : corrcompCntInfo.zipcode },
+                          new SqlParameter("@cont_with_dfta_yn", SqlDbType.Char) { Value = string.IsNullOrEmpty(corrcompCntInfo.cont_with_dfta_yn) ? (object)DBNull.Value : corrcompCntInfo.cont_with_dfta_yn },
+                          new SqlParameter("@dfta_id", SqlDbType.Char) { Value = string.IsNullOrEmpty(corrcompCntInfo.dfta_id) ? (object)DBNull.Value : corrcompCntInfo.dfta_id },
+                          new SqlParameter("@other_site_name", SqlDbType.VarChar) { Value = string.IsNullOrEmpty(corrcompCntInfo.other_site_name) ? (object)DBNull.Value : corrcompCntInfo.other_site_name },
+                          new SqlParameter("@last_updated_by", SqlDbType.Int) { Value = UserID },
+                          new SqlParameter("@tstamp", SqlDbType.DateTime) { Value = corrcompCntInfo.tstamp });
+        }
+
+        public void InsertUpdateCCDetailsInfo(TrackingViewModel CCDetailsInfo, int ccno, int UserID)
+        {
+            // //IncLocationInfo table
+            IncLocationInfo incLocationInfo = new IncLocationInfo();
+            CCDetailsInfo.corrcmpInfo.cc_number = ccno;
+            incLocationInfo.inc_loc_type = CCDetailsInfo.inclocationinfo.inc_loc_type;
+            incLocationInfo.street_add = CCDetailsInfo.inclocationinfo.street_add;
+            incLocationInfo.city = CCDetailsInfo.inclocationinfo.city;
+            incLocationInfo.state = CCDetailsInfo.inclocationinfo.state;
+            incLocationInfo.zipcode = CCDetailsInfo.inclocationinfo.zipcode;
+            incLocationInfo.inc_loc_type = CCDetailsInfo.inclocationinfo.inc_loc_type;
+            incLocationInfo.tstamp = DateTime.Now;
+            var result2 = _unitOfWork.Repository<CorrCompInfo>().ExecuteProcedure("SP_InsertUpdateIncLocationInfo @cc_number,@inc_loc_type,@street_add,@city,@state,@zipcode,@zipcode2,@last_update_by,@tstamp",
+                          new SqlParameter("@cc_number", SqlDbType.Int) { Value = CCDetailsInfo.corrcmpInfo.cc_number },
+                          new SqlParameter("@inc_loc_type", SqlDbType.VarChar) { Value = string.IsNullOrEmpty(incLocationInfo.inc_loc_type) ? (object)DBNull.Value : incLocationInfo.inc_loc_type },
+                          new SqlParameter("@street_add", SqlDbType.VarChar) { Value = string.IsNullOrEmpty(incLocationInfo.street_add) ? (object)DBNull.Value : incLocationInfo.street_add },
+                          new SqlParameter("@city", SqlDbType.VarChar) { Value = string.IsNullOrEmpty(incLocationInfo.city) ? (object)DBNull.Value : incLocationInfo.city },
+                          new SqlParameter("@state", SqlDbType.Char) { Value = string.IsNullOrEmpty(incLocationInfo.state) ? (object)DBNull.Value : incLocationInfo.state },
+                          new SqlParameter("@zipcode", SqlDbType.Char) { Value = string.IsNullOrEmpty(incLocationInfo.zipcode) ? (object)DBNull.Value : incLocationInfo.zipcode },
+                          new SqlParameter("@zipcode2", SqlDbType.Char) { Value = string.IsNullOrEmpty(incLocationInfo.zipcode) ? (object)DBNull.Value : incLocationInfo.zipcode },
+                          new SqlParameter("@last_update_by", SqlDbType.Int) { Value = UserID },
+                          new SqlParameter("@tstamp", SqlDbType.DateTime) { Value = incLocationInfo.tstamp });
+        }
+
+        public int InsertUpdateCCReferralInfo(TrackingViewModel CCReferralInfo, int ccno, int UserID)
+        {
+            //ReferralInfo table
+            ReferralInfo referralInfo = new ReferralInfo();
+            referralInfo.cc_number = ccno;
+            referralInfo.referred_to_group = CCReferralInfo.referralInfom.referred_to_group;
+            referralInfo.referral_status = CCReferralInfo.referralInfom.referral_status;
+            referralInfo.referral_accpt_by = UserID;
+            referralInfo.last_update_by = UserID;
+            referralInfo.referred_to_unit = CCReferralInfo.referralInfom.referred_to_unit;
+            referralInfo.referal_date = CCReferralInfo.referralInfom.referal_date;
+            referralInfo.cc_handled_by = CCReferralInfo.referralInfom.cc_handled_by;
+            SqlParameter outRefIdSqlParam = new SqlParameter("@referral_id", SqlDbType.Int) { Direction = ParameterDirection.Output, Value = 0 };
+            int refID = _unitOfWork.Repository<ReferralInfo>().ExecuteProcedure("SP_InsertUpdateReferralInfo @cc_number,@referred_to_group,@referral_status,@referral_accpt_by,@last_update_by,@referred_to_unit,@referal_date,@cc_handled_by,@referral_id out",
+                            new SqlParameter("@cc_number", SqlDbType.Int) { Value = referralInfo.cc_number },
+                            new SqlParameter("@referred_to_group", SqlDbType.VarChar) { Value = string.IsNullOrEmpty(referralInfo.referred_to_group) ? (object)DBNull.Value : referralInfo.referred_to_group },
+                            new SqlParameter("@referral_status", SqlDbType.VarChar) { Value = string.IsNullOrEmpty(referralInfo.referral_status) ? (object)DBNull.Value : referralInfo.referral_status },
+                            new SqlParameter("@referral_accpt_by", SqlDbType.Int) { Value = referralInfo.referral_accpt_by },
+                            new SqlParameter("@last_update_by", SqlDbType.Int) { Value = referralInfo.last_update_by },
+                            new SqlParameter("@referred_to_unit", SqlDbType.VarChar) { Value = string.IsNullOrEmpty(referralInfo.referred_to_unit) ? (object)DBNull.Value : referralInfo.referred_to_unit },
+                            new SqlParameter("@referal_date", SqlDbType.Date) { Value = referralInfo.referal_date },
+                            new SqlParameter("@cc_handled_by", SqlDbType.Int) { Value = referralInfo.cc_handled_by },
+                            outRefIdSqlParam);
+            int outrefid = (int)outRefIdSqlParam.Value;
+            return outrefid;
+
+        }
+
+        public int InsertCCReferralInfo(TrackingViewModel CCReferralInfo, int ccno, int UserID)
+        {
+            //ReferralInfo table
+            ReferralInfo referralInfo = new ReferralInfo();
+            referralInfo.cc_number = ccno;
+            referralInfo.referred_to_group = CCReferralInfo.referralInfom.referred_to_group;
+            referralInfo.referral_status = null;
+            referralInfo.referral_accpt_by = UserID;
+            referralInfo.last_update_by = UserID;
+            referralInfo.referred_to_unit = CCReferralInfo.referralInfom.referred_to_unit;
+            referralInfo.referal_date = CCReferralInfo.referralInfom.referal_date;
+            referralInfo.cc_handled_by = CCReferralInfo.referralInfom.cc_handled_by;
+            SqlParameter outRefIdSqlParam = new SqlParameter("@referral_id", SqlDbType.Int) { Direction = ParameterDirection.Output, Value = 0 };
+            int refID = _unitOfWork.Repository<ReferralInfo>().ExecuteProcedure("SP_InsertReferralInfo @cc_number,@referred_to_group,@referral_status,@referral_accpt_by,@last_update_by,@referred_to_unit,@referal_date,@cc_handled_by,@referral_id out",
+                            new SqlParameter("@cc_number", SqlDbType.Int) { Value = referralInfo.cc_number },
+                            new SqlParameter("@referred_to_group", SqlDbType.VarChar) { Value = string.IsNullOrEmpty(referralInfo.referred_to_group) ? (object)DBNull.Value : referralInfo.referred_to_group },
+                            new SqlParameter("@referral_status", SqlDbType.VarChar) { Value = string.IsNullOrEmpty(referralInfo.referral_status) ? (object)DBNull.Value : referralInfo.referral_status },
+                            new SqlParameter("@referral_accpt_by", SqlDbType.Int) { Value = referralInfo.referral_accpt_by },
+                            new SqlParameter("@last_update_by", SqlDbType.Int) { Value = referralInfo.last_update_by },
+                            new SqlParameter("@referred_to_unit", SqlDbType.VarChar) { Value = string.IsNullOrEmpty(referralInfo.referred_to_unit) ? (object)DBNull.Value : referralInfo.referred_to_unit },
+                            new SqlParameter("@referal_date", SqlDbType.Date) { Value = referralInfo.referal_date },
+                            new SqlParameter("@cc_handled_by", SqlDbType.Int) { Value = referralInfo.cc_handled_by },
+                            new SqlParameter("@referral_id", SqlDbType.Int) { Direction = ParameterDirection.Output, Value = 0 },
+                            outRefIdSqlParam);
+            int outrefid = (int)outRefIdSqlParam.Value;
+            return outrefid;
+
+        }
+
+        public void InsertUpdateCCReferralText(TrackingViewModel CCReferralText, int ccno, int UserID, int RefferalID)
+        {
+            ReferralText referralText = new ReferralText();
+            referralText.cc_number = ccno;
+            referralText.referral_id = RefferalID;
+            if (!string.IsNullOrEmpty(CCReferralText.referralText.referrer_comments_text))
+            {
+                referralText.referrer_comments = System.Text.ASCIIEncoding.Default.GetBytes(CCReferralText.referralText.referrer_comments_text);
+                referralText.referrer_comments_text = CCReferralText.referralText.referrer_comments_text;
+            }
+            if (!string.IsNullOrEmpty(CCReferralText.referralText.referee_comments_text))
+            {
+                referralText.referrer_comments = System.Text.ASCIIEncoding.Default.GetBytes(CCReferralText.referralText.referee_comments_text);
+                referralText.referee_comments_text = CCReferralText.referralText.referee_comments_text;
+            }
+            referralText.last_updated_by = UserID;
+            var result = _unitOfWork.Repository<CorrCompInfo>().ExecuteProcedure("SP_InsertUpdateReferralText @cc_number,@referral_id,@referrer_comments,@referrer_comments_text,@referee_comments,@referee_comments_text,@last_updated_by",
+                           new SqlParameter("@cc_number", SqlDbType.Int) { Value = referralText.cc_number },
+                           new SqlParameter("@referral_id", SqlDbType.Int) { Value = referralText.referral_id },
+                           new SqlParameter("@referrer_comments", SqlDbType.Binary) { Value = referralText.referrer_comments },
+                           new SqlParameter("@referrer_comments_text", SqlDbType.VarChar) { Value = string.IsNullOrEmpty(referralText.referrer_comments_text) ? (object)DBNull.Value : referralText.referrer_comments_text },
+                           new SqlParameter("@referee_comments", SqlDbType.Binary) { Value = referralText.referrer_comments },
+                           new SqlParameter("@referee_comments_text", SqlDbType.VarChar) { Value = string.IsNullOrEmpty(referralText.referee_comments_text) ? (object)DBNull.Value : referralText.referee_comments_text },
+                           new SqlParameter("@last_updated_by", SqlDbType.Int) { Value = referralText.last_updated_by });
+        }
+
+        public void InsertUpdateCCResolutionInfo(TrackingViewModel CCResolutionInfo, int ccno, int UserID)
+        {
+            //Resoultion table
+            ResolutionInfo resolutionInfo = new ResolutionInfo(); // @cc_number,@cc_handled_by,@comments,@last_updated_by,@date_resolved,@ref_resolution_status
+            resolutionInfo.cc_number = ccno;
+            resolutionInfo.cc_handled_by = UserID;
+            resolutionInfo.comments = CCResolutionInfo.resolutionInfom.comments;
+            resolutionInfo.last_updated_by = UserID;
+            resolutionInfo.date_resolved = CCResolutionInfo.resolutionInfom.date_resolved;
+            resolutionInfo.ref_resolution_status = CCResolutionInfo.resolutionInfom.ref_resolution_status;
+            if (resolutionInfo.ref_resolution_status == null)
+            {
+                resolutionInfo.current_status = "Resolution submitted to Supervisor Approval";
+            }
+            else
+            {
+                resolutionInfo.current_status = resolutionInfo.ref_resolution_status;
+            }
+            var result4 = _unitOfWork.Repository<CorrCompInfo>().ExecuteProcedure("SP_InsertUpdateResolutionInfo  @cc_number,@cc_handled_by,@comments,@last_updated_by,@date_resolved,@ref_resolution_status,@current_status",
+                         new SqlParameter("@cc_number", SqlDbType.Int) { Value = CCResolutionInfo.corrcmpInfo.cc_number },
+                         new SqlParameter("@cc_handled_by", SqlDbType.Int) { Value = resolutionInfo.cc_handled_by },
+                         new SqlParameter("@comments", SqlDbType.VarChar) { Value = string.IsNullOrEmpty(resolutionInfo.comments) ? (object)DBNull.Value : resolutionInfo.comments },
+                         new SqlParameter("@last_updated_by", SqlDbType.Int) { Value = resolutionInfo.last_updated_by },
+                         new SqlParameter("@date_resolved", SqlDbType.DateTime) { Value = resolutionInfo.date_resolved },
+                         new SqlParameter("@ref_resolution_status", SqlDbType.VarChar) { Value = string.IsNullOrEmpty(resolutionInfo.ref_resolution_status) ? (object)DBNull.Value : resolutionInfo.ref_resolution_status },
+                         new SqlParameter("@current_status", SqlDbType.VarChar) { Value = string.IsNullOrEmpty(resolutionInfo.current_status) ? (object)DBNull.Value : resolutionInfo.current_status });
+        }
+
+        public void InsertUpdateCorrCompDescResolution(TrackingViewModel corrCompDescResolution, int ccno, int UserID)
+        {
+            //Description table
+            CorrCompDescResolution ccDescResolution = new CorrCompDescResolution(); // @cc_number,@cc_description,@cc_description_text,@cc_resolution,@cc_resolution_text,@last_update_by,@tstamp
+            ccDescResolution.cc_number = ccno;
+            if (!string.IsNullOrEmpty(corrCompDescResolution.ccDescInfo.cc_description_text))
+            {
+                // ccDescResolution.cc_description = new byte[Convert.ToInt32(CorrCompDescResolution.ccDescInfo.cc_description_text)];
+                ccDescResolution.cc_description = System.Text.ASCIIEncoding.Default.GetBytes(corrCompDescResolution.ccDescInfo.cc_description_text);
+                ccDescResolution.cc_description_text = corrCompDescResolution.ccDescInfo.cc_description_text;
+            }
+            if (!string.IsNullOrEmpty(corrCompDescResolution.ccDescInfo.cc_resolution_text))
+            {
+                // ccDescResolution.cc_resolution = new byte[Convert.ToInt32(CorrCompDescResolution.ccDescInfo.cc_resolution_text)];
+                ccDescResolution.cc_resolution = System.Text.ASCIIEncoding.Default.GetBytes(corrCompDescResolution.ccDescInfo.cc_resolution_text);
+                ccDescResolution.cc_resolution_text = corrCompDescResolution.ccDescInfo.cc_resolution_text;
+            }
+            ccDescResolution.last_update_by = UserID;
+            ccDescResolution.tstamp = DateTime.Now;
+            var result4 = _unitOfWork.Repository<CorrCompInfo>().ExecuteProcedure("SP_InsertUpdateCorrCompDescResolution @cc_number,@cc_description,@cc_description_text,@cc_resolution,@cc_resolution_text,@last_update_by,@tstamp",
+                         new SqlParameter("@cc_number", SqlDbType.Int) { Value = ccDescResolution.cc_number.HasValue ? ccDescResolution.cc_number.Value : (object)DBNull.Value },
+                         new SqlParameter("@cc_description", SqlDbType.Binary) { Value = DBNull.Value },
+                         new SqlParameter("@cc_description_text", SqlDbType.VarChar) { Value = string.IsNullOrEmpty(ccDescResolution.cc_description_text) ? (object)DBNull.Value : ccDescResolution.cc_description_text },
+                         new SqlParameter("@cc_resolution", SqlDbType.Binary) { Value = DBNull.Value },
+                         new SqlParameter("@cc_resolution_text", SqlDbType.VarChar) { Value = string.IsNullOrEmpty(ccDescResolution.cc_resolution_text) ? (object)DBNull.Value : ccDescResolution.cc_resolution_text },
+                         new SqlParameter("@last_update_by", SqlDbType.Int) { Value = ccDescResolution.last_update_by },
+                         new SqlParameter("@tstamp", SqlDbType.DateTime) { Value = ccDescResolution.tstamp });
+        }
+
+        public void InsertUpdateDocumentsInfo(TrackingViewModel documentsVM, int ccno, int UserID)
+        {
+            //Description table
+            DocumentsInfo documentsinfo = new DocumentsInfo(); // @cc_number,@attachment_type,@file_name,@file_ext,@file_location,@last_updated_by,@record_status,@tstamp
+            documentsinfo.cc_number = ccno;
+            documentsinfo.attachment_type = documentsVM.documentsInfom.attachment_type;
+            documentsinfo.file_name = documentsVM.documentsInfom.file_name;
+            documentsinfo.file_ext = documentsVM.documentsInfom.file_ext;
+            documentsinfo.file_location = documentsVM.documentsInfom.file_location;
+            documentsinfo.last_updated_by = UserID;
+            documentsinfo.record_status = "Active";
+            documentsinfo.tstamp = DateTime.Now;
+            var result4 = _unitOfWork.Repository<CorrCompInfo>().ExecuteProcedure("SP_InsertUpdateDocumentsInfo @cc_number,@attachment_type,@file_name,@file_ext,@file_location,@last_updated_by,@record_status,@tstamp",
+                         new SqlParameter("@cc_number", SqlDbType.Int) { Value = documentsinfo.cc_number },
+                         new SqlParameter("@attachment_type", SqlDbType.VarChar) { Value = string.IsNullOrEmpty(documentsinfo.attachment_type) ? (object)DBNull.Value : documentsinfo.attachment_type },
+                         new SqlParameter("@file_name", SqlDbType.VarChar) { Value = string.IsNullOrEmpty(documentsinfo.file_name) ? (object)DBNull.Value : documentsinfo.file_name },
+                         new SqlParameter("@file_ext", SqlDbType.Char) { Value = string.IsNullOrEmpty(documentsinfo.file_ext) ? (object)DBNull.Value : documentsinfo.file_ext },
+                         new SqlParameter("@file_location", SqlDbType.VarChar) { Value = string.IsNullOrEmpty(documentsinfo.file_location) ? (object)DBNull.Value : documentsinfo.file_location },
+                         new SqlParameter("@last_updated_by", SqlDbType.Int) { Value = documentsinfo.last_updated_by },
+                         new SqlParameter("@record_status", SqlDbType.VarChar) { Value = string.IsNullOrEmpty(documentsinfo.record_status) ? (object)DBNull.Value : documentsinfo.record_status },
+                         new SqlParameter("@tstamp", SqlDbType.DateTime) { Value = documentsinfo.tstamp });
+        }
+
+        public void UpdateResStatus(TrackingViewModel resStatusVM, int ccno, int resstatus, int UserID)
+        {
+            CorrCompInfo corrcompinfo = new CorrCompInfo();
+            corrcompinfo.cc_number = ccno;
+            corrcompinfo.resolution_status = resstatus.ToString();
+            corrcompinfo.mayor_date = resStatusVM.corrcmpInfo.mayor_date;
+            corrcompinfo.last_updated_by = UserID;
+            var result = _unitOfWork.Repository<CorrCompInfo>().ExecuteProcedure("SP_UpdateResStatus @cc_number,@resolution_status,@mayor_date,@last_updated_by",
+                          new SqlParameter("@cc_number", SqlDbType.Int) { Value = corrcompinfo.cc_number },
+                          new SqlParameter("@resolution_status", SqlDbType.VarChar) { Value = string.IsNullOrEmpty(corrcompinfo.resolution_status) ? (object)DBNull.Value : corrcompinfo.resolution_status },
+                          new SqlParameter("@mayor_date", SqlDbType.Date) { Value = DBNull.Value },
+                          new SqlParameter("@last_updated_by", SqlDbType.Int) { Value = corrcompinfo.last_updated_by });
+        }
+        public void DeleteUpdateDocumentsInfo(int attchmtID)
+        {
+            _unitOfWork.Repository<DocumentsInfo>().ExecuteProcedure("SP_DeleteUpdateDocumentsInfo @attachment_id",
+           new SqlParameter("@attachment_id", SqlDbType.Int) { Value = attchmtID });
+        }
+
+    }
+}

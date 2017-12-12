@@ -1,0 +1,2 @@
+        var test = $("#referralInfom_comments_ifr").contents()[0].body;
+        test.contentEditable = "false";
